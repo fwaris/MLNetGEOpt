@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="scripts\packages.fsx" />
+    <None Include="scripts\Sandbox.fsx" />
+    <Compile Include="MetaGrammar.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.AutoML" Version="0.20.1" />
+    <PackageReference Include="MLUtils" Version="0.21.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="7.0.200" />
+  </ItemGroup>
+
+  <ItemGroup />
+
+</Project>
