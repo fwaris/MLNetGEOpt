@@ -33,26 +33,8 @@ type Srch =
 type Fac1 = 
     static member  fac1 (ctx:MLContext) : IEstimator<ITransformer> = ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation("a",labelColumnName="b") :> IEstimator<ITransformer>
     
-type T1 = {Features:float32[]}
 
 module Exp =
-    let ctx = MLContext()
-
-    let n1 =
-        let fac (ctx:MLContext) p = ctx.Transforms.NormalizeBinning("features") |> asEstimator
-        SweepableEstimator(fac,new SearchSpace())
-
-    let n2 = 
-        let fac (ctx:MLContext) p = ctx.Transforms.NormalizeGlobalContrast("features") |> asEstimator
-        SweepableEstimator(fac,new SearchSpace())
-
-    let facF1 (dv:IDataView) (ci:ColumnInformation)=ctx.Auto().Featurizer(dv,ci)    
-
-    let dv = ctx.Data.LoadFromEnumerable<T1>([],MLUtils.Schema.cleanSchema typeof<T1>)
-
-    let f1 = facF1 dv (ColumnInformation()) 
-
-    let gram2 = [Pipeline f1; Alt [Estimator n1; Estimator n2]]
 
     let rec tranlateTerm (genome:int[]) (acc,i) (t:Term) =
         let i = if i >= genome.Length then 0 else i
@@ -87,5 +69,7 @@ module Exp =
         ||> List.fold (fun acc t ->
             match t with 
             | Estimator e -> acc.Append(e)
-            | Pipeline p -> (acc,p.Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value)))
-            | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called"
+            | Pipeline p -> (acc,p.Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
+            | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called")
+
+
