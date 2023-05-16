@@ -72,4 +72,28 @@ module T =
             | Pipeline p -> (acc,p.Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
             | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called")
 
+    let esimateGenomeSize (g:Grammar) =
+        (*
+            What is a good estimate of genome size?
+            Genome 'size' has two aspects:
+            A) the length of the genome - or the number of integer slots
+            B) the range of each integer slot
+            The grammar has only 2 type of decision points Opt and Alt terms.
+            The rest are deterministic - no choice.
+            The choice for Opt requires only a boolean value (0 or 1)
+            The choice for Alt requires a value with range 0..(N-1) where N is the number of child terms in the Alt term.
+            The largest possible Alt term can be used to set the range of all integer slots.
+            Under GE, a genome can be reused by 'wrapping around' if the end of the gnome is reached 
+            and there are still grammar terms remaining.
+            However, here we can determine the length of the longest 'sentence' for a given grammar. 
+            This is because we don't have recursion. Nesting is allowed though, i.e. Opt and Alt terms may contain child Opt and Alt terms (along with other terms).
+            Genome length is the longest possible path in the nested grammar.
+            *However, we can do slightly better here.* Because we know the maximum length, we don't have to wrap around.
+            This allows us to specify further restrictions on the ranges of individual integer slots.
+            We can perform a breadth first search and for each level we can take the maximum range
+            as the allowed range for the corresponding integer slot. 
+            So instead of setting all integer slots to the same range, we can customize
+            individual slots to be more restrictive - reducing the volume of the search space.
 
+        *)
+        ()
