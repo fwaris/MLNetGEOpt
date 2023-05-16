@@ -33,8 +33,8 @@ type Srch =
 type Fac1 = 
     static member  fac1 (ctx:MLContext) : IEstimator<ITransformer> = ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation("a",labelColumnName="b") :> IEstimator<ITransformer>
     
-
-module Exp =
+[<RequireQualifiedAccess>]
+module T =
 
     let rec tranlateTerm (genome:int[]) (acc,i) (t:Term) =
         let i = if i >= genome.Length then 0 else i
@@ -46,7 +46,7 @@ module Exp =
             else
                 acc,(i+1)
         | Alt ts ->
-            let t' = ts.[genome.[i]]     
+            let t' = ts.[genome.[i] % ts.Length]     
             tranlateTerm genome (acc,i+1) t'
         | Union ts -> 
             match ts with 

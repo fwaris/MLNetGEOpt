@@ -27,4 +27,9 @@ let f1 = facF1 dv (ColumnInformation())
 
 let gram2 = [Pipeline f1; Alt [Estimator n1; Estimator n2]]
 
+let gn1 = [|2;5;2;5;2|]
+
+let ps1,i = T.translate gn1 gram2
+let ps2 = T.toPipeline ps1
+
 
