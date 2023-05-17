@@ -1,5 +1,8 @@
 ﻿#r "nuget: Microsoft.ML.AutoML"
 #r "nuget: MLUtils"
+#r "nuget: CAOpt"
 
-#load "../MetaGrammar.fs"
+#load "../Grammar.fs"
+#load "../SearchSpace.fs"
+
 

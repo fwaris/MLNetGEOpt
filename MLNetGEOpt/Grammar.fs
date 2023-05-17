@@ -1,22 +1,7 @@
 ﻿namespace MLNetGEOpt
-open Microsoft.ML
-open Microsoft.ML.Data
 open Microsoft.ML.AutoML
-open Microsoft.ML.SearchSpace
-open MLUtils.Pipeline
 
 //meta grammar to describe the grammar for the grammatical evolution process
-//
-(*
-What do we need?
-Given:
-- linear genome composed of float values
-- genome (genotype) translated to AST (phenotype)
-- AST evaluated for fitness
-- population of linear genome evolved via 'search engine'
-Grammar:
-- start, non-terminals, terminals [keywords | [value (domain / range)]], production rules
-*)
 
 type Term = 
     | Opt of Term 
@@ -27,17 +12,12 @@ type Term =
 
 type Grammar = Term list
 
-type Srch =
-    static member Double(s:string,lo:float,hi:float,?isLog) = let ss = SearchSpace() in ss.Add(s,Option.UniformDoubleOption(lo,hi,?logBase=isLog)); ss
-
-type Fac1 = 
-    static member  fac1 (ctx:MLContext) : IEstimator<ITransformer> = ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation("a",labelColumnName="b") :> IEstimator<ITransformer>
     
 [<RequireQualifiedAccess>]
-module T =
+module Grammar =
 
-    let rec tranlateTerm (genome:int[]) (acc,i) (t:Term) =
-        //let i = if i >= genome.Length then 0 else i  //no wrap around to reuse genome in our case
+    let rec private tranlateTerm (genome:int[]) (acc,i) (t:Term) =
+        //let i = if i >= genome.Length then 0 else i  //no wrap around in our case
         match t with
         | Pipeline _ | Estimator _ -> (t::acc),i 
         | Opt t'  -> 

@@ -8,18 +8,19 @@
   <ItemGroup>
     <None Include="scripts\packages.fsx" />
     <None Include="scripts\Sandbox.fsx" />
-    <Compile Include="MetaGrammar.fs" />
+    <Compile Include="Grammar.fs" />
+    <Compile Include="SearchSpace.fs" />
+    <Compile Include="Optimize.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CAOpt" Version="1.0.1" />
     <PackageReference Include="Microsoft.ML.AutoML" Version="0.20.1" />
     <PackageReference Include="MLUtils" Version="0.21.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="7.0.200" />
+    <PackageReference Update="FSharp.Core" Version="7.0.300" />
   </ItemGroup>
-
-  <ItemGroup />
 
 </Project>

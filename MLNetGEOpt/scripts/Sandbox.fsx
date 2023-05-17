@@ -26,11 +26,12 @@ let f1 = facF1 dv (ColumnInformation())
 
 let gram2 = [Pipeline f1; Alt [Estimator n1; Estimator n2]]
 
-let genomeSize = T.esimateGenomeSize gram2 |> List.toArray
+let genomeSize = Grammar.esimateGenomeSize gram2 |> List.toArray
 
 let gn1 = [|2;5;2;5;2|]
 
-let ps1,i = T.translate genomeSize gram2
-let ps2 = T.toPipeline ps1
+let ps1,i = Grammar.translate genomeSize gram2
+let ps2 = Grammar.toPipeline ps1
+
 
 
