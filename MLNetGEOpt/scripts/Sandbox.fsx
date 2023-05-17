@@ -22,14 +22,15 @@ let dv = ctx.Data.LoadFromEnumerable<T1>([], Schema.cleanSchema typeof<T1>)
 
 let facF1 (dv:IDataView) (ci:ColumnInformation)=ctx.Auto().Featurizer(dv,ci)    
 
-
 let f1 = facF1 dv (ColumnInformation()) 
 
 let gram2 = [Pipeline f1; Alt [Estimator n1; Estimator n2]]
 
+let genomeSize = T.esimateGenomeSize gram2 |> List.toArray
+
 let gn1 = [|2;5;2;5;2|]
 
-let ps1,i = T.translate gn1 gram2
+let ps1,i = T.translate genomeSize gram2
 let ps2 = T.toPipeline ps1
 
 
