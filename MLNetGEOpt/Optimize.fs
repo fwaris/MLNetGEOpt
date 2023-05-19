@@ -3,10 +3,6 @@ open CA
 open Microsoft.ML.AutoML
 open Microsoft.ML
 
-type Exp<'a when 'a : not struct > = 
-    | Predefined of ExperimentBase<'a,ExperimentSettings> * IDataView * IDataView 
-    | Custom of AutoMLExperiment
-
 module Optimize =
     (*
         evolved the genome using CA rules

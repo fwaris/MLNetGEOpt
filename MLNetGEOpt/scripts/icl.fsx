@@ -30,7 +30,7 @@ let seNorm (mbcMin,mbcMax) =
     let fac (ctx:MLContext) (p:Parameter) = 
         let fixZero = p.[lF].AsType<bool>()
         let mbc = p.[lM].AsType<int>() 
-        let mbc = if mbc = 0 then None else Some(mbc)
+        let mbc = if mbc = 1 then None else Some(mbc)
         ctx.Transforms.NormalizeBinning("Features",fixZero=fixZero,?maximumBinCount=mbc) |> asEstimator        
     let ss = Search.init() |> Search.withChoice(lF,[|true;false|]) |> Search.withUniformInt(lM,mbcMin,mbcMax)
     SweepableEstimator(fac,ss)
@@ -95,7 +95,7 @@ let g =
     [
         Estimator seBase        
         Alt [
-            Alt ([(0,10); (11,20); (21,30); (31,100)] |> List.map(seNorm>>Estimator))
+            Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(seNorm>>Estimator))
             Estimator seNormLpNorm
             Estimator seNormLogMeanVar
             Estimator seNormMeanVar
@@ -109,16 +109,17 @@ let expFac  (p:SweepablePipeline) =
         .CreateExperiment()
         .SetBinaryClassificationMetric(BinaryClassificationMetric.F1Score,"Class")
         .SetDataset(dv,3)
-        .SetTrainingTimeInSeconds(60u*5u)
-        .SetMonitor(
-            {new IMonitor with
-                 member this.ReportBestTrial(result) = printfn "%O" result
-                 member this.ReportCompletedTrial(result) =printfn "%O" result
-                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``
-                 member this.ReportRunningTrial(setting) = printfn "%O" setting                
-            })
+        .SetTrainingTimeInSeconds(60u*5u)        
         .SetPipeline(p)
-
+        .SetMonitor(
+            let s : TrialSettings ref = ref Unchecked.defaultof<_>
+            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""M: {r.Metric} {isDone} - {s.Value.Parameter.["_pipeline_"]}"""
+            {new IMonitor with
+                 member this.ReportBestTrial(result) = printLine true result 
+                 member this.ReportCompletedTrial(result) = printLine false result 
+                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``
+                 member this.ReportRunningTrial(setting) = s.Value <- setting            
+            })
 
 //let p1 = Grammar.esimateGenomeSize g |> List.toArray |> Grammar.translate g |> (fst>>Grammar.toPipeline)
 //p1.Estimators |> Seq.map(fun x->x.Value.SearchSpace) |> Seq.toArray
