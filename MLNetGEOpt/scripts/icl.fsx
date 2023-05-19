@@ -120,14 +120,10 @@ let expFac  (p:SweepablePipeline) =
         .SetPipeline(p)
 
 
-let p1 = Grammar.esimateGenomeSize g |> List.toArray |> Grammar.translate g |> (fst>>Grammar.toPipeline)
-p1.Estimators |> Seq.map(fun x->x.Value.SearchSpace) |> Seq.toArray
-e0.SearchSpace
-0791
-let e1 = expFac p1
-
-
-e1.Run()
+//let p1 = Grammar.esimateGenomeSize g |> List.toArray |> Grammar.translate g |> (fst>>Grammar.toPipeline)
+//p1.Estimators |> Seq.map(fun x->x.Value.SearchSpace) |> Seq.toArray
+//let e1 = expFac p1
+//e1.Run()
 
 let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize expFac g
 

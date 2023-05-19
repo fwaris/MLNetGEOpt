@@ -43,7 +43,7 @@ module Optimize =
                 rslt.Metric
             )
              
-        let mutable step = CALib.API.initCA(parms, fitness, kind)
+        let mutable step = CALib.API.initCA(parms, fitness, kind,36)
         for i in 0 .. 15000 do 
             step <- CALib.API.Step step
         
