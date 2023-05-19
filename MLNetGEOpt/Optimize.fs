@@ -25,46 +25,28 @@ module Optimize =
           - multi-class classfication
           - regression         
     *)
-    let opt<'a when 'a: not struct> (g:Grammar) (expFac:unit -> Exp<'a>) =
+    let run kind (expFac:SweepablePipeline -> AutoMLExperiment) (g:Grammar)=
         let genomSize = Grammar.esimateGenomeSize g
         let parms = genomSize |> List.map(fun x -> I(0,0,x)) |> List.toArray
 
+        let mutable fmap = Map.empty
         let fitness (pvals:float[]) = 
             let genome = pvals |> Array.map int
-            let terminals = Grammar.translate genome g
-            let pipeline,_ = Grammar.toPipeline terminals
-            let exp = expFac()
-            match exp with
-            | Predefined (exp,_,_) -> exp.Execute()
-            
-
-
-    let ctx = MLContext()
-    let exp = ctx.Auto().CreateBinaryClassificationExperiment(39u)
-    let oset = AutoMLExperiment.AutoMLExperimentSettings()
-    oset.SearchSpace <- exp.
-    let oexp = AutoMLExperiment(ctx,oset)
-    let b1 = BinaryClassificationExperiment()
-    let ex2 = exp :?> AutoMLExperiment
-
-    let exp1 = AutoMLExperiment()
-
-
-    let o =
-        {new ITrialRunner with
-             member this.Dispose() = raise (System.NotImplementedException())
-             member this.RunAsync(settings, ct) = 
-                task {
-                    return 
-                        TrialResult(
-                            Metric = 0.,
-                            Model = null,
-                            TrialSettings = settings,
-                            DurationInMilliseconds = 0.0
-                        )
-                }
-                
-        }
-
-    ()
-
+            fmap
+            |> Map.tryFind genome
+            |> Option.defaultWith(fun _ -> 
+                let terminals,_ = Grammar.translate g genome
+                let pipeline = Grammar.toPipeline terminals
+                let exp = expFac pipeline                
+                let rslt = exp.Run()
+                fmap <- fmap |> Map.add genome rslt.Metric
+                rslt.Metric
+            )
+             
+        let mutable step = CALib.API.initCA(parms, fitness, kind)
+        for i in 0 .. 15000 do 
+            step <- CALib.API.Step step
+        
+        let gbest = step.Best.[0].MParms |> Array.map int
+        let gbestTerms,_ = Grammar.translate g gbest 
+        gbestTerms, step.Best.[0].MFitness

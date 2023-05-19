@@ -40,8 +40,12 @@ module Grammar =
                 let acc,i = tranlateTerm genome (acc,i) t
                 tranlateTerm genome (acc,i+1) (Union rest)
 
-    let translate genome grammar =
-        (([],0),grammar) ||> List.fold (fun (acc,i) t -> tranlateTerm genome (acc,i) t)
+    let translate grammar genome  =
+        let terminals,len =
+            (([],0),grammar) 
+            ||> List.fold (fun (acc,i) t -> tranlateTerm genome (acc,i) t)
+        List.rev terminals, len
+        
 
     let toPipeline terminals = 
         let h,ts =

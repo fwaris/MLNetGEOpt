@@ -30,7 +30,7 @@ let genomeSize = Grammar.esimateGenomeSize gram2 |> List.toArray
 
 let gn1 = [|2;5;2;5;2|]
 
-let ps1,i = Grammar.translate genomeSize gram2
+let ps1,i = Grammar.translate  gram2 genomeSize
 let ps2 = Grammar.toPipeline ps1
 
 
