@@ -1,4 +1,4 @@
-﻿#load "packages.fsx"
+﻿//#load "packages.fsx"
 open System
 open Microsoft.ML
 open Microsoft.ML.Data
@@ -110,18 +110,18 @@ let seNormMeanVar =
         |> Search.withChoice(lucf,[|true;false|]) 
         |> Search.withChoice(lEzm,[|true;false|])
     SweepableEstimator(fac,ss)
-
+    
 let g = 
     [
-        Estimator seBase        
-        Alt [
-            Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(seNorm>>Estimator))
+        Estimator seBase                                                                //Nil
+        Alt [                                                                           //4
+            Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(seNorm>>Estimator))   //6
             Estimator seNormLpNorm
             Estimator seNormLogMeanVar
             Estimator seNormMeanVar
             Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(seGlobalContrast>>Estimator))
         ]
-        Opt (Estimator seWhiten)
+        Opt (Estimator seWhiten)                                                        //1
         Pipeline seClass
     ]
 

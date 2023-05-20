@@ -23,7 +23,9 @@ module Optimize =
     *)
     let run kind (expFac:SweepablePipeline -> AutoMLExperiment) (g:Grammar)=
         let genomSize = Grammar.esimateGenomeSize g
-        let parms = genomSize |> List.map(fun x -> I(0,0,x)) |> List.toArray
+        let genomSize = if genomSize < 4 then genomSize else genomSize / 2
+            
+        let parms = [1 .. genomSize] |> List.map(fun x -> I(0,255,128)) |> List.toArray
 
         let mutable fmap = Map.empty
         let fitness (pvals:float[]) = 
