@@ -111,6 +111,43 @@ let seNormMeanVar =
         |> Search.withChoice(lEzm,[|true;false|])
     SweepableEstimator(fac,ss)
 
+let seProjPca (rLo,rHi) =
+    let lrank = "rank"
+    let lovsmp = "overSampling"
+    let lezm = "ensureZeroMean"
+    let fac (ctx:MLContext) (p:Parameter) =
+        let rank = p.[lrank].AsType<int>()
+        let rank = if rank = 0 then None else Some rank
+        let ensureZeroMean = p.[lezm].AsType<bool>()
+        ctx.Transforms.ProjectToPrincipalComponents("Features",?rank=rank,ensureZeroMean=ensureZeroMean) |> asEstimator
+    let ss =
+        Search.init()
+        |> Search.withChoice(lezm,[|true;false|])
+        |> Search.withUniformInt(lrank,rLo,rHi)
+    SweepableEstimator(fac, ss)
+
+let seKernelMap (rLo,rHi) =
+    let lrank = "rank"
+    let lcossin = "useCosAndSinBases"
+    let lgen = "generator"
+    let fac (ctx:MLContext) (p:Parameter) =
+        let rank = p.[lrank].AsType<int>()
+        let rank = if rank = 0 then None else Some rank
+        let useCosAndSinBases = p.[lcossin].AsType<bool>() 
+        let generator = p.[lgen].AsType<Transforms.KernelBase>()
+        ctx.Transforms.ApproximatedKernelMap("Features",?rank=rank,useCosAndSinBases=useCosAndSinBases,generator=generator) |> asEstimator
+    let genvals = 
+        Enum.GetValues(typeof<Transforms.KernelBase>) 
+        |> Seq.cast<Transforms.KernelBase>
+        |> Seq.map box
+        |> Seq.toArray
+    let ss =
+        Search.init()
+        |> Search.withChoice(lcossin,[|true;false|])
+        |> Search.withUniformInt(lrank,rLo,rHi)
+        |> Search.withChoice(lgen,genvals)
+    SweepableEstimator(fac, ss)
+
 let g = 
     [
         Estimator seBase        
@@ -122,15 +159,20 @@ let g =
             Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(seGlobalContrast>>Estimator))
         ]
         Opt (Estimator seWhiten)
+        Opt (
+            Alt [
+                Estimator (seProjPca (2,10))
+                Estimator (seKernelMap (2,10))
+            ])
         Pipeline seClass
     ]
 
-let expFac  (p:SweepablePipeline) =
+let expFac timeout (p:SweepablePipeline) =
     ctx.Auto()
         .CreateExperiment()
         .SetBinaryClassificationMetric(BinaryClassificationMetric.F1Score,"Class")
         .SetDataset(dv,3)
-        .SetTrainingTimeInSeconds(60u*20u)        
+        .SetTrainingTimeInSeconds(timeout)        
         .SetPipeline(p)
         .SetMonitor(
             let s : TrialSettings ref = ref Unchecked.defaultof<_>
@@ -147,7 +189,7 @@ let expFac  (p:SweepablePipeline) =
 //let e1 = expFac p1
 //e1.Run()
 
-let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize expFac g
+let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize (expFac 600u) g
 
 
 
