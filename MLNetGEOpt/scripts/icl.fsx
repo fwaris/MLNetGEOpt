@@ -136,17 +136,13 @@ let seKernelMap (rLo,rHi) =
         let useCosAndSinBases = p.[lcossin].AsType<bool>() 
         let generator = p.[lgen].AsType<Transforms.KernelBase>()
         ctx.Transforms.ApproximatedKernelMap("Features",?rank=rank,useCosAndSinBases=useCosAndSinBases,generator=generator) |> asEstimator
-    let genvals = 
-        Enum.GetValues(typeof<Transforms.KernelBase>) 
-        |> Seq.cast<Transforms.KernelBase>
-        |> Seq.map box
-        |> Seq.toArray
     let ss =
         Search.init()
         |> Search.withChoice(lcossin,[|true;false|])
         |> Search.withUniformInt(lrank,rLo,rHi)
-        |> Search.withChoice(lgen,genvals)
+        |> Search.withChoice(lgen,[|Transforms.GaussianKernel(); Transforms.LaplacianKernel()|])
     SweepableEstimator(fac, ss)
+
 
 let g = 
     [
