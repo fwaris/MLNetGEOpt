@@ -35,3 +35,5 @@ MLUtils.Schema.printTxChain dv.Schema 2 m1
 let dvs = m1.Transform(dv)
 type [<CLIMutable>] T1 = {Class:bool; Probabiliy:float32; PredictedLabel:bool}
 let t1s = ctx.Data.CreateEnumerable<T1>(dvs,false,ignoreMissingColumns=true) |> Seq.toArray
+open Plotly.NET
+t1s |> Seq.map(fun x->x.Probabiliy) |> Chart.Histogram |> Chart.show
