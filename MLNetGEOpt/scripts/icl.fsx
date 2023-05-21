@@ -24,8 +24,6 @@ let seBase =
         ctx.Transforms.Categorical.OneHotEncoding("EJ") <!>ctx.Transforms.Concatenate("Features",grpCols)
     SweepableEstimator(fac,new SearchSpace())
 
-
-
 let g = 
     [
         Estimator seBase       
@@ -80,6 +78,7 @@ let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize (expFac 600u) g
 Grammar.printPipeline ctx oPl
 (*
 let opLS = Grammar.toPipeline oPl
-let trial = expFac 6000u opLS
+let trial = expFac 600u opLS
 trial.Run()
 *)
+

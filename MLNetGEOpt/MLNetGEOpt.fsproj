@@ -8,6 +8,7 @@
   <ItemGroup>
     <None Include="scripts\packages.fsx" />
     <None Include="scripts\Sandbox.fsx" />
+    <None Include="scripts\BinaryExp.fsx" />
     <None Include="scripts\icl.fsx" />
     <Compile Include="Grammar.fs" />
     <Compile Include="SearchSpace.fs" />
