@@ -78,6 +78,36 @@ let seNormLpNorm =
         |> Search.withChoice(lNorm, normVals)
     SweepableEstimator(fac,ss)
 
+let seNormRobustScaling =
+    let lcntr = "centerData"
+    let fac (ctx:MLContext) (p:Parameter) = 
+        let centerData = p.[lcntr].AsType<bool>()
+        ctx.Transforms.NormalizeRobustScaling("Features",centerData=centerData) |> asEstimator
+    let ss = 
+        Search.init() 
+        |> Search.withChoice(lcntr,[|true;false|]) 
+    SweepableEstimator(fac,ss)
+    
+let seNormMinMax =
+    let lfixz = "fixZero"
+    let fac (ctx:MLContext) (p:Parameter) = 
+        let fixZero = p.[lfixz].AsType<bool>()
+        ctx.Transforms.NormalizeMinMax("Features",fixZero=fixZero) |> asEstimator
+    let ss = 
+        Search.init() 
+        |> Search.withChoice(lfixz,[|true;false|]) 
+    SweepableEstimator(fac,ss)
+
+let seNormSupBin label =
+    let lfixz = "fixZero"
+    let fac (ctx:MLContext) (p:Parameter) = 
+        let fixZero = p.[lfixz].AsType<bool>()
+        ctx.Transforms.NormalizeSupervisedBinning("Features",fixZero=fixZero,labelColumnName=label) |> asEstimator
+    let ss = 
+        Search.init() 
+        |> Search.withChoice(lfixz,[|true;false|]) 
+    SweepableEstimator(fac,ss)
+
 
 let seWhiten = 
     let lkind = "WhiteningKind"
@@ -126,6 +156,8 @@ let seProjPca (rLo,rHi) =
         |> Search.withUniformInt(lrank,rLo,rHi)
     SweepableEstimator(fac, ss)
 
+let [<Literal>] Kgaus = "gaussian"
+let [<Literal>] Klap = "laplacian"
 let seKernelMap (rLo,rHi) =
     let lrank = "rank"
     let lcossin = "useCosAndSinBases"
@@ -134,13 +166,18 @@ let seKernelMap (rLo,rHi) =
         let rank = p.[lrank].AsType<int>()
         let rank = if rank = 0 then None else Some rank
         let useCosAndSinBases = p.[lcossin].AsType<bool>() 
-        let generator = p.[lgen].AsType<Transforms.KernelBase>()
-        ctx.Transforms.ApproximatedKernelMap("Features",?rank=rank,useCosAndSinBases=useCosAndSinBases,generator=generator) |> asEstimator
+        let generator = p.[lgen].AsType<string>()
+        let generator  = 
+            match generator with 
+            | Kgaus -> Transforms.GaussianKernel()  :> Transforms.KernelBase |> Some 
+            | Klap  -> Transforms.LaplacianKernel() :> Transforms.KernelBase |> Some 
+            | _     -> None
+        ctx.Transforms.ApproximatedKernelMap("Features",?rank=rank,useCosAndSinBases=useCosAndSinBases,?generator=generator) |> asEstimator
     let ss =
         Search.init()
         |> Search.withChoice(lcossin,[|true;false|])
         |> Search.withUniformInt(lrank,rLo,rHi)
-        |> Search.withChoice(lgen,[|Transforms.GaussianKernel(); Transforms.LaplacianKernel()|])
+        |> Search.withChoice(lgen,[|Kgaus; Klap|])
     SweepableEstimator(fac, ss)
 
 
@@ -153,6 +190,9 @@ let g =
             Estimator seNormLogMeanVar
             Estimator seNormMeanVar
             Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(seGlobalContrast>>Estimator))
+            Estimator seNormMinMax
+            Estimator seNormRobustScaling
+            Estimator (seNormSupBin "Class")
         ]
         Opt (Estimator seWhiten)
         Opt (
@@ -187,5 +227,8 @@ let expFac timeout (p:SweepablePipeline) =
 
 let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize (expFac 600u) g
 
-
-
+(*
+let opLS = Grammar.toPipeline oPl
+let trial = expFac 6000u opLS
+trial.Run()
+*)
