@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="scripts\game.fsx" />
     <None Include="scripts\packages.fsx" />
     <None Include="scripts\Sandbox.fsx" />
     <None Include="scripts\BinaryExp.fsx" />
