@@ -184,3 +184,37 @@ module E =
             Search.init()
         SweepableEstimator(fac, ss)
 
+    let seTextFeaturize (txtCol:string) =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.Text.FeaturizeText(txtCol) |> asEstimator
+        let ss =
+            Search.init()
+        SweepableEstimator(fac, ss)
+
+    let inline zeroIsDefault v = if int v = 0 then None else Some v
+
+    let seTextHashedNGrams (txtCol:string) =
+        let lbits = "numberOfBits"
+        let lngl = "ngramLength"
+        let lskl = "skipLength"
+        let lalll = "useAllLengths"
+        let loh = "useOrderedHashing"
+        let fac (ctx:MLContext) (p:Parameter) =
+            let numberOfBits = p.[lbits].AsType<int>() |> zeroIsDefault
+            let ngramLength = p.[lngl].AsType<int>()  |> zeroIsDefault
+            let skipLength = p.[lskl].AsType<int>()   |> zeroIsDefault
+            let useAllLengths = p.[lalll].AsType<bool>()
+            let useOrderedHashing = p.[loh].AsType<bool>()
+            let tx1 = ctx.Transforms.Text.TokenizeIntoCharactersAsKeys("tokens",txtCol)
+            let tx2 = ctx.Transforms.Text.ProduceHashedNgrams(txtCol,"tokens",?numberOfBits=numberOfBits,?ngramLength=ngramLength,
+                                                    ?skipLength=skipLength,useAllLengths=useAllLengths,
+                                                    useOrderedHashing=useOrderedHashing)
+            tx1 <!> tx2
+        let ss =
+            Search.init()
+            |> Search.withUniformInt(lbits,0,4)
+            |> Search.withUniformInt(lngl,0,5)
+            |> Search.withUniformInt(lskl,0,5)
+            |> Search.withChoice(lalll,[|true;false|])
+            |> Search.withChoice(loh,[|true;false|])
+        SweepableEstimator(fac, ss)

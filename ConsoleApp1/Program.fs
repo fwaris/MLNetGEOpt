@@ -147,7 +147,8 @@ let expFac  (p:SweepablePipeline) =
 //let e1 = expFac p1
 //e1.Run()
 
-let oPl,oAcc = Optimize.run CA.OptimizationKind.Maximize expFac g
+let oPl,oAcc,rslt = Optimize.run CA.OptimizationKind.Maximize expFac g
+
 
 
 
