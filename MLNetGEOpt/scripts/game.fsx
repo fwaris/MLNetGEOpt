@@ -287,7 +287,7 @@ let expFac question dv timeout (p:SweepablePipeline) =
             {new IMonitor with
                  member this.ReportBestTrial(result) = printLine true result 
                  member this.ReportCompletedTrial(result) = printLine false result 
-                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``
+                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``; printfn $"%A{settings}"
                  member this.ReportRunningTrial(setting) = s.Value <- setting            
             })
 
@@ -302,7 +302,7 @@ let train lvlGrpu answ =
     ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
     rslt,oPl
 
-train "0-4" 2
+//train "0-4" 2
 
 
 let lvlGrpAns = 
@@ -311,6 +311,9 @@ let lvlGrpAns =
         "5-12", [4..11]
         "13-22",[12..17]
     ]
+    |> List.collect(fun (l,xs) -> xs |> List.map (fun y -> l,y))
+
+let rslts = lvlGrpAns |> List.map(fun (l,a) -> async{return train l a;}) |> Async.Parallel |> Async.RunSynchronously
 
 
 
