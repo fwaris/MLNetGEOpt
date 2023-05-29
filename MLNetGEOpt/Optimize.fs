@@ -21,7 +21,7 @@ module Optimize =
           - multi-class classfication
           - regression         
     *)
-    let run kind (expFac:SweepablePipeline -> AutoMLExperiment) (g:Grammar)=
+    let run trials kind (expFac:SweepablePipeline -> AutoMLExperiment) (g:Grammar)=
         let worstVal = match kind with Minimize -> 9e10 | _ -> -9e10
         let genomSize = Grammar.esimateGenomeSize g
         let genomSize = if genomSize < 4 then genomSize else genomSize / 2
@@ -68,7 +68,7 @@ module Optimize =
                 )
              
         let mutable step = CALib.API.initCA(parms, fitness, kind,36)
-        for i in 0 .. 15000 do 
+        for i in 0 .. trials-1 do 
             step <- CALib.API.Step step
         
         let gbest = step.Best.[0].MParms |> Array.map int

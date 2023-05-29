@@ -98,7 +98,6 @@ module E =
             |> Search.withChoice(lfixz,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
-
     let seWhiten = 
         let lkind = "WhiteningKind"
         let lrank = "rank"
@@ -182,6 +181,24 @@ module E =
             ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation("Features",labelColumnName=label) |> asEstimator
         let ss =
             Search.init()
+        SweepableEstimator(fac, ss)
+
+    let seMissingVals() =
+        let lrmode = "replacementMode"
+        let limpt = "imputeBySlot"
+        let fac (ctx:MLContext) (p:Parameter) =
+            let replacementMode = p.[lrmode].AsType<Transforms.MissingValueReplacingEstimator.ReplacementMode>()
+            let imputeBySlot = p.[limpt].AsType<bool>()
+            ctx.Transforms.ReplaceMissingValues("Features",replacementMode=replacementMode,imputeBySlot=imputeBySlot) |> asEstimator
+        let wvals = 
+            Enum.GetValues(typeof<Transforms.MissingValueReplacingEstimator.ReplacementMode>) 
+            |> Seq.cast<Transforms.MissingValueReplacingEstimator.ReplacementMode>
+            |> Seq.map box
+            |> Seq.toArray
+        let ss =
+            Search.init()
+            |> Search.withChoice(lrmode,wvals)
+            |> Search.withChoice(limpt,[|true;false|])            
         SweepableEstimator(fac, ss)
 
     let seTextFeaturize (txtCol:string) =

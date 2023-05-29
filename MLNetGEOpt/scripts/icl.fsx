@@ -74,7 +74,7 @@ let expFac timeout (p:SweepablePipeline) =
 //let e1 = expFac p1
 //e1.Run()
 
-let oPl,oAcc,rlst = Optimize.run CA.OptimizationKind.Maximize (expFac 600u) g
+let oPl,oAcc,rlst = Optimize.run 15000 CA.OptimizationKind.Maximize (expFac 600u) g
 Grammar.printPipeline ctx oPl
 (*
 let opLS = Grammar.toPipeline oPl

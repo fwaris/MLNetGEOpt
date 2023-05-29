@@ -229,7 +229,7 @@ let ftrCols =
         "hq_count"; "music_count";|]
 
 let seBase =    
-    let fac (ctx:MLContext) p = 
+    let fac (ctx:MLContext) p =         
         ctx.Transforms.Concatenate("Features",ftrCols) |> asEstimator
     SweepableEstimator(fac,new SearchSpace())
 
@@ -240,6 +240,7 @@ let grammar =
                 Estimator (E.seTextHashedNGrams "text")
         ]            
         Estimator seBase       
+        Opt(Estimator (E.seMissingVals()))
         Opt(
             Alt [
                 Estimator (E.seFtrSelCount 10)
@@ -297,7 +298,7 @@ let train lvlGrpu answ =
     let txTgt = ctx.Transforms.CustomMapping(setTarget answ,contractName=null)
     let dv3 = txTgt.Fit(dv2).Transform(dv2)
     Schema.printSchema dv3.Schema 
-    let oPl,oAcc,rslt = Optimize.run CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
+    let oPl,oAcc,rslt = Optimize.run 5000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
     let mdlPath = root @@ $"model_{answ}.bin"
     ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
     rslt,oPl
@@ -313,7 +314,7 @@ let lvlGrpAns =
     ]
     |> List.collect(fun (l,xs) -> xs |> List.map (fun y -> l,y))
 
-let rslts = lvlGrpAns |> List.map(fun (l,a) -> async{return train l a;}) |> Async.Parallel |> Async.RunSynchronously
+let rslts = lvlGrpAns |> List.map(fun (l,a) -> train l a)
 
 
 
