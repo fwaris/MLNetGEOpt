@@ -284,7 +284,7 @@ let expFac question dv timeout (p:SweepablePipeline) =
         .SetPipeline(p)
         .SetMonitor(
             let s : TrialSettings ref = ref Unchecked.defaultof<_>
-            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""{question} M: {r.Metric} {isDone} - {s.Value.Parameter.["_pipeline_"]}"""
+            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""{question} M: {r.Metric} {isDone} - {s.Value.Parameter.[E.PIPELINE]}"""
             {new IMonitor with
                  member this.ReportBestTrial(result) = printLine true result 
                  member this.ReportCompletedTrial(result) = printLine false result 
@@ -302,7 +302,7 @@ let train lvlGrpu answ =
     let mdlPath = root @@ $"model_{answ}.bin"
     let settingsPath = root @@ $"model_settings_{answ}.txt"
     ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
-    File.WriteAllText(settingsPath,sprintf "%A" rslt.TrialSettings)
+    File.WriteAllText(settingsPath,sprintf "%A" rslt.TrialSettings.Parameter.[E.PIPELINE])
     rslt,oPl
 
 //train "0-4" 2
@@ -317,7 +317,7 @@ let lvlGrpAns =
 
 let rslts = 
     lvlGrpAns 
-    |> List.filter(fun (l,a) -> a > 8) 
+    |> List.filter(fun (l,a) -> a > 9) 
     |> List.map(fun (l,a) -> train l a)
 
 

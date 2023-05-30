@@ -14,6 +14,15 @@ type Search =
 
 [<RequireQualifiedAccess>]
 module E =
+    let inline zeroIsDefault<'a when 'a: equality> (v:'a) = if v = Unchecked.defaultof<'a> then None else Some v
+    (*
+    zeroIsDefault 0.f
+    zeroIsDefault 0
+    zeroIsDefault 0.0
+    zeroIsDefault 1.0    
+    *)
+    let PIPELINE = "_pipeline_"
+
     let seNorm (mbcMin,mbcMax) () = 
         let lF = "fixZero"
         let lM = "maximumBinCount"
@@ -32,8 +41,7 @@ module E =
         let fac (ctx:MLContext) (p:Parameter) = 
             let ezm = p.[lZm].AsType<bool>()
             let eusd = p.[lSd].AsType<bool>() 
-            let scale = p.[lScl].AsType<float32>()
-            let scale = if scale = 0.f then None else Some scale
+            let scale = p.[lScl].AsType<float32>() |> zeroIsDefault
             ctx.Transforms.NormalizeGlobalContrast("Features",ensureZeroMean=ezm,ensureUnitStandardDeviation=eusd,?scale=scale) |> asEstimator
         let ss = 
             Search.init() 
@@ -103,8 +111,7 @@ module E =
         let lrank = "rank"
         let fac (ctx:MLContext) (p:Parameter) =         
             let kind = p.[lkind].AsType<Microsoft.ML.Transforms.WhiteningKind>()
-            let rank = p.[lrank].AsType<int>()
-            let rank = if rank = 0 then None else Some rank
+            let rank = p.[lrank].AsType<int>() |> zeroIsDefault
             ctx.Transforms.VectorWhiten("Features",kind=kind,?rank=rank) |> asEstimator
         let wvals = 
             Enum.GetValues(typeof<Transforms.WhiteningKind>) 
@@ -135,8 +142,7 @@ module E =
         let lovsmp = "overSampling"
         let lezm = "ensureZeroMean"
         let fac (ctx:MLContext) (p:Parameter) =
-            let rank = p.[lrank].AsType<int>()
-            let rank = if rank = 0 then None else Some rank
+            let rank = p.[lrank].AsType<int>() |> zeroIsDefault
             let ensureZeroMean = p.[lezm].AsType<bool>()
             ctx.Transforms.ProjectToPrincipalComponents("Features",?rank=rank,ensureZeroMean=ensureZeroMean) |> asEstimator
         let ss =
@@ -152,8 +158,7 @@ module E =
         let lcossin = "useCosAndSinBases"
         let lgen = "generator"
         let fac (ctx:MLContext) (p:Parameter) =
-            let rank = p.[lrank].AsType<int>()
-            let rank = if rank = 0 then None else Some rank
+            let rank = p.[lrank].AsType<int>() |> zeroIsDefault
             let useCosAndSinBases = p.[lcossin].AsType<bool>() 
             let generator = p.[lgen].AsType<string>()
             let generator  = 
@@ -207,8 +212,6 @@ module E =
         let ss =
             Search.init()
         SweepableEstimator(fac, ss)
-
-    let inline zeroIsDefault v = if int v = 0 then None else Some v
 
     let seTextHashedNGrams (txtCol:string) () =
         let lbits = "numberOfBits"
