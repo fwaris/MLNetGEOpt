@@ -16,9 +16,9 @@ ColInfo.showCols colInfr.ColumnInformation
 let ldr = ctx.Data.CreateTextLoader(colInfr.TextLoaderOptions)
 let dv = ldr.Load(path)
 
-let seBinClassification = ctx.Auto().BinaryClassification(labelColumnName="Class",featureColumnName="Features",useFastTree=true,useLgbm=true)
+let seBinClassification() = ctx.Auto().BinaryClassification(labelColumnName="Class",featureColumnName="Features",useFastTree=true,useLgbm=true)
 
-let seBase =    
+let seBase() =    
     let fac (ctx:MLContext) p = 
         let grpCols = Seq.append colInfr.ColumnInformation.CategoricalColumnNames  colInfr.ColumnInformation.NumericColumnNames |> Seq.toArray
         ctx.Transforms.Categorical.OneHotEncoding("EJ") <!>ctx.Transforms.Concatenate("Features",grpCols)
@@ -38,7 +38,7 @@ let g =
                 Estimator E.seNormLpNorm
                 Estimator E.seNormLogMeanVar
                 Estimator E.seNormMeanVar
-                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast>>Estimator))
+                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
                 Estimator E.seNormMinMax
                 Estimator E.seNormRobustScaling
                 Estimator (E.seNormSupBin "Class")

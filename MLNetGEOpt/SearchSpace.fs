@@ -14,7 +14,7 @@ type Search =
 
 [<RequireQualifiedAccess>]
 module E =
-    let seNorm (mbcMin,mbcMax) = 
+    let seNorm (mbcMin,mbcMax) () = 
         let lF = "fixZero"
         let lM = "maximumBinCount"
         let fac (ctx:MLContext) (p:Parameter) = 
@@ -25,7 +25,7 @@ module E =
         let ss = Search.init() |> Search.withChoice(lF,[|true;false|]) |> Search.withUniformInt(lM,mbcMin,mbcMax)
         SweepableEstimator(fac,ss)
 
-    let seGlobalContrast (sclMin,sclMax) = 
+    let seGlobalContrast() (sclMin,sclMax) () = 
         let lZm = "ensureZeroMean"
         let lSd = "ensureUnitStandardDeviation"
         let lScl = "scale"
@@ -42,7 +42,7 @@ module E =
             |> Search.withUniformFloat32(lScl,sclMin,sclMax)
         SweepableEstimator(fac,ss)
 
-    let seNormLogMeanVar = 
+    let seNormLogMeanVar() = 
         let lucf = "useCdf"
         let fac (ctx:MLContext) (p:Parameter) = 
             let useCdf = p.[lucf].AsType<bool>()
@@ -50,7 +50,7 @@ module E =
         let ss = Search.init() |> Search.withChoice(lucf,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
-    let seNormLpNorm = 
+    let seNormLpNorm() = 
         let lEzm = "ensureZeroMean"
         let lNorm = "norm"
         let fac (ctx:MLContext) (p:Parameter) = 
@@ -68,7 +68,7 @@ module E =
             |> Search.withChoice(lNorm, normVals)
         SweepableEstimator(fac,ss)
 
-    let seNormRobustScaling =
+    let seNormRobustScaling() =
         let lcntr = "centerData"
         let fac (ctx:MLContext) (p:Parameter) = 
             let centerData = p.[lcntr].AsType<bool>()
@@ -78,7 +78,7 @@ module E =
             |> Search.withChoice(lcntr,[|true;false|]) 
         SweepableEstimator(fac,ss)
     
-    let seNormMinMax =
+    let seNormMinMax() =
         let lfixz = "fixZero"
         let fac (ctx:MLContext) (p:Parameter) = 
             let fixZero = p.[lfixz].AsType<bool>()
@@ -88,7 +88,7 @@ module E =
             |> Search.withChoice(lfixz,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
-    let seNormSupBin label =
+    let seNormSupBin label () =
         let lfixz = "fixZero"
         let fac (ctx:MLContext) (p:Parameter) = 
             let fixZero = p.[lfixz].AsType<bool>()
@@ -98,7 +98,7 @@ module E =
             |> Search.withChoice(lfixz,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
-    let seWhiten = 
+    let seWhiten() = 
         let lkind = "WhiteningKind"
         let lrank = "rank"
         let fac (ctx:MLContext) (p:Parameter) =         
@@ -114,10 +114,10 @@ module E =
         let ss = 
             Search.init() 
             |> Search.withChoice(lkind,wvals) 
-            |> Search.withUniformInt(lrank,0,10)
+            |> Search.withUniformInt(lrank,0,5)
         SweepableEstimator(fac,ss)
 
-    let seNormMeanVar = 
+    let seNormMeanVar() = 
         let lucf = "useCdf"
         let lEzm = "ensureZeroMean"
         let fac (ctx:MLContext) (p:Parameter) = 
@@ -130,7 +130,7 @@ module E =
             |> Search.withChoice(lEzm,[|true;false|])
         SweepableEstimator(fac,ss)
 
-    let seProjPca (rLo,rHi) =
+    let seProjPca (rLo,rHi) () =
         let lrank = "rank"
         let lovsmp = "overSampling"
         let lezm = "ensureZeroMean"
@@ -147,7 +147,7 @@ module E =
 
     let [<Literal>] private Kgaus = "gaussian"
     let [<Literal>] private Klap = "laplacian"
-    let seKernelMap (rLo,rHi) =
+    let seKernelMap (rLo,rHi) () =
         let lrank = "rank"
         let lcossin = "useCosAndSinBases"
         let lgen = "generator"
@@ -169,14 +169,14 @@ module E =
             |> Search.withChoice(lgen,[|Kgaus; Klap|])
         SweepableEstimator(fac, ss)
 
-    let seFtrSelCount count =
+    let seFtrSelCount count () =
         let fac (ctx:MLContext) (p:Parameter) =
             ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnCount("Features",count=count) |> asEstimator
         let ss =
             Search.init()
         SweepableEstimator(fac, ss)
 
-    let seFtrSelMutualInf label =
+    let seFtrSelMutualInf label () =
         let fac (ctx:MLContext) (p:Parameter) =
             ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation("Features",labelColumnName=label) |> asEstimator
         let ss =
@@ -201,7 +201,7 @@ module E =
             |> Search.withChoice(limpt,[|true;false|])            
         SweepableEstimator(fac, ss)
 
-    let seTextFeaturize (txtCol:string) =
+    let seTextFeaturize (txtCol:string) () =
         let fac (ctx:MLContext) (p:Parameter) =
             ctx.Transforms.Text.FeaturizeText(txtCol) |> asEstimator
         let ss =
@@ -210,7 +210,7 @@ module E =
 
     let inline zeroIsDefault v = if int v = 0 then None else Some v
 
-    let seTextHashedNGrams (txtCol:string) =
+    let seTextHashedNGrams (txtCol:string) () =
         let lbits = "numberOfBits"
         let lngl = "ngramLength"
         let lskl = "skipLength"

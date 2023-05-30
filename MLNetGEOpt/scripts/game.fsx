@@ -216,7 +216,7 @@ Featurize.saveFeatures()
 let dvAns2 = ctx.Data.LoadFromBinary(dvFile)
 Schema.printSchema dvAns2.Schema
 
-let seBinClassification = ctx.Auto().BinaryClassification(labelColumnName="target",featureColumnName="Features",useFastTree=true,useLgbm=true)
+let seBinClassification() = ctx.Auto().BinaryClassification(labelColumnName="target",featureColumnName="Features",useFastTree=true,useLgbm=true)
 
 let ftrCols =
     //dvAns.Schema |> Seq.map(fun x->x.Name) |> Seq.toArray
@@ -228,7 +228,7 @@ let ftrCols =
         "fqid_count"; "room_fqid_count"; "text_fqid_count"; "fullscreen_count";
         "hq_count"; "music_count";|]
 
-let seBase =    
+let seBase() =    
     let fac (ctx:MLContext) p =         
         ctx.Transforms.Concatenate("Features",ftrCols) |> asEstimator
     SweepableEstimator(fac,new SearchSpace())
@@ -239,8 +239,8 @@ let grammar =
                 Estimator (E.seTextFeaturize "text")
                 Estimator (E.seTextHashedNGrams "text")
         ]            
-        Estimator seBase       
-        Opt(Estimator (E.seMissingVals()))
+        Estimator (seBase)
+        Opt(Estimator E.seMissingVals)
         Opt(
             Alt [
                 Estimator (E.seFtrSelCount 10)
@@ -252,14 +252,14 @@ let grammar =
                 Estimator E.seNormLpNorm
                 Estimator E.seNormLogMeanVar
                 Estimator E.seNormMeanVar
-                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast>>Estimator))
+                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
                 Estimator E.seNormMinMax
-                //Estimator E.seNormRobustScaling
+                Estimator E.seNormRobustScaling
                 Estimator (E.seNormSupBin "target")
             ])
-        Opt (Estimator E.seWhiten)
         Opt (
             Alt [
+                Estimator E.seWhiten
                 Estimator (E.seProjPca (2,10))
                 Estimator (E.seKernelMap (2,10))
             ])
@@ -300,11 +300,12 @@ let train lvlGrpu answ =
     Schema.printSchema dv3.Schema 
     let oPl,oAcc,rslt = Optimize.run 5000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
     let mdlPath = root @@ $"model_{answ}.bin"
+    let settingsPath = root @@ $"model_settings_{answ}.txt"
     ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
+    File.WriteAllText(settingsPath,sprintf "%A" rslt.TrialSettings)
     rslt,oPl
 
 //train "0-4" 2
-
 
 let lvlGrpAns = 
     [
@@ -314,7 +315,10 @@ let lvlGrpAns =
     ]
     |> List.collect(fun (l,xs) -> xs |> List.map (fun y -> l,y))
 
-let rslts = lvlGrpAns |> List.map(fun (l,a) -> train l a)
+let rslts = 
+    lvlGrpAns 
+    |> List.filter(fun (l,a) -> a > 8) 
+    |> List.map(fun (l,a) -> train l a)
 
 
 
