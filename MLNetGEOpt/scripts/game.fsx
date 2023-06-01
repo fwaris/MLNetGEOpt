@@ -252,7 +252,7 @@ let grammar =
                 Estimator E.seNormLpNorm
                 Estimator E.seNormLogMeanVar
                 Estimator E.seNormMeanVar
-                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
+                //Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
                 Estimator E.seNormMinMax
                 Estimator E.seNormRobustScaling
                 Estimator (E.seNormSupBin "target")
@@ -302,7 +302,10 @@ let train lvlGrpu answ =
     let mdlPath = root @@ $"model_{answ}.bin"
     let settingsPath = root @@ $"model_settings_{answ}.txt"
     ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
-    File.WriteAllText(settingsPath,sprintf "%A" rslt.TrialSettings.Parameter.[E.PIPELINE])
+    let metric = rslt.Metric |> string
+    let settings = rslt.TrialSettings.Parameter.[E.PIPELINE].ToString()
+    let lines = [metric; settings]
+    File.WriteAllLines(settingsPath,lines)
     rslt,oPl
 
 //train "0-4" 2
@@ -317,7 +320,7 @@ let lvlGrpAns =
 
 let rslts = 
     lvlGrpAns 
-    |> List.filter(fun (l,a) -> a > 9) 
+    |> List.filter(fun (l,a) -> a = 8) 
     |> List.map(fun (l,a) -> train l a)
 
 
