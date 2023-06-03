@@ -6,11 +6,13 @@ open Microsoft.ML
 open MLUtils.Pipeline
 
 type Search =
+    static member TERM_ID = "_mlopt_term_"
     static member init() = new SearchSpace()
     static member withUniformFloat(s:string,lo,hi,?logBase,?defaultValue)  = fun (ss:SearchSpace) -> ss.Add(s,Option.UniformDoubleOption(lo,hi,?logBase=logBase,?defaultValue=defaultValue)); ss
     static member withUniformInt (s:string,lo,hi,?logBase,?defaultValue) =  fun (ss:SearchSpace) -> ss.Add(s,Option.UniformIntOption(lo,hi,?logBase=logBase,?defaultValue=defaultValue)); ss
     static member withUniformFloat32 (s:string,lo,hi,?logBase,?defaultValue) = fun (ss:SearchSpace) -> ss.Add(s,Option.UniformSingleOption(lo,hi,?logBase=logBase,?defaultValue=defaultValue)); ss
     static member withChoice(s:string,choices: obj[],?defaultChoice) = fun  (ss:SearchSpace) -> let opt = match defaultChoice with Some d -> Option.ChoiceOption(choices,d) | _-> Option.ChoiceOption(choices) in ss.Add(s,opt); ss
+    static member withId(s:string) = Search.withChoice(Search.TERM_ID,[|s|])
 
 [<RequireQualifiedAccess>]
 module E =
@@ -24,7 +26,7 @@ module E =
     let PIPELINE = "_pipeline_"
     let FEATURES = "Features"
 
-    let seNorm (col:string) (mbcMin,mbcMax) () =         
+    let seNormBin (col:string) (mbcMin,mbcMax) () =         
         let lF = "fixZero"
         let lM = "maximumBinCount"
         let fac (ctx:MLContext) (p:Parameter) = 
@@ -32,7 +34,11 @@ module E =
             let mbc = p.[lM].AsType<int>() 
             let mbc = if mbc = 1 then None else Some(mbc)
             ctx.Transforms.NormalizeBinning(col,fixZero=fixZero,?maximumBinCount=mbc) |> asEstimator        
-        let ss = Search.init() |> Search.withChoice(lF,[|true;false|]) |> Search.withUniformInt(lM,mbcMin,mbcMax)
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormBin {col}"
+            |> Search.withChoice(lF,[|true;false|]) 
+            |> Search.withUniformInt(lM,mbcMin,mbcMax)
         SweepableEstimator(fac,ss)
 
     let seGlobalContrast (col:string) (sclMin,sclMax) () =         
@@ -46,6 +52,7 @@ module E =
             ctx.Transforms.NormalizeGlobalContrast(col,ensureZeroMean=ezm,ensureUnitStandardDeviation=eusd,?scale=scale) |> asEstimator
         let ss = 
             Search.init() 
+            |> Search.withId $"seGlobalContrast {col}"
             |> Search.withChoice(lZm,[|true;false|]) 
             |> Search.withChoice(lSd,[|true;false|])
             |> Search.withUniformFloat32(lScl,sclMin,sclMax)
@@ -56,7 +63,10 @@ module E =
         let fac (ctx:MLContext) (p:Parameter) = 
             let useCdf = p.[lucf].AsType<bool>()
             ctx.Transforms.NormalizeLogMeanVariance(col,useCdf=useCdf) |> asEstimator
-        let ss = Search.init() |> Search.withChoice(lucf,[|true;false|]) 
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormLogMeanVar {col}"
+            |> Search.withChoice(lucf,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
     let seNormLpNorm (col:string) () = 
@@ -73,6 +83,7 @@ module E =
             |> Seq.toArray
         let ss = 
             Search.init() 
+            |> Search.withId $"seNormLpNorm {col}"
             |> Search.withChoice(lEzm,[|true;false|]) 
             |> Search.withChoice(lNorm, normVals)
         SweepableEstimator(fac,ss)
@@ -84,6 +95,7 @@ module E =
             ctx.Transforms.NormalizeRobustScaling(col,centerData=centerData) |> asEstimator
         let ss = 
             Search.init() 
+            |> Search.withId $"seNormRobustScaling {col}"
             |> Search.withChoice(lcntr,[|true;false|]) 
         SweepableEstimator(fac,ss)
     
@@ -91,9 +103,10 @@ module E =
         let lfixz = "fixZero"
         let fac (ctx:MLContext) (p:Parameter) = 
             let fixZero = p.[lfixz].AsType<bool>()
-            ctx.Transforms.NormalizeMinMax("Features",fixZero=fixZero) |> asEstimator
+            ctx.Transforms.NormalizeMinMax(col,fixZero=fixZero) |> asEstimator
         let ss = 
             Search.init() 
+            |> Search.withId $"seNormMinMax {col}"
             |> Search.withChoice(lfixz,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
@@ -104,6 +117,7 @@ module E =
             ctx.Transforms.NormalizeSupervisedBinning(col,fixZero=fixZero,labelColumnName=label) |> asEstimator
         let ss = 
             Search.init() 
+            |> Search.withId $"seNormSupBin {col}"
             |> Search.withChoice(lfixz,[|true;false|]) 
         SweepableEstimator(fac,ss)
 
@@ -112,7 +126,8 @@ module E =
         let lrank = "rank"
         let fac (ctx:MLContext) (p:Parameter) =         
             let kind = p.[lkind].AsType<Microsoft.ML.Transforms.WhiteningKind>()
-            let rank = p.[lrank].AsType<int>() |> zeroIsDefault
+            let rank = p.[lrank].AsType<int>()
+            let rank = if kind = Transforms.WhiteningKind.PrincipalComponentAnalysis then Some rank else None
             ctx.Transforms.VectorWhiten(col,kind=kind,?rank=rank) |> asEstimator
         let wvals = 
             Enum.GetValues(typeof<Transforms.WhiteningKind>) 
@@ -121,8 +136,9 @@ module E =
             |> Seq.toArray
         let ss = 
             Search.init() 
+            |> Search.withId $"seWhiten {col}"
             |> Search.withChoice(lkind,wvals) 
-            |> Search.withUniformInt(lrank,0,5)
+            |> Search.withUniformInt(lrank,2,5)
         SweepableEstimator(fac,ss)
 
     let seNormMeanVar (col:string) ()= 
@@ -134,6 +150,7 @@ module E =
             ctx.Transforms.NormalizeMeanVariance(col,useCdf=useCdf,fixZero=ezm) |> asEstimator
         let ss = 
             Search.init() 
+            |> Search.withId $"seNormMeanVar {col}"
             |> Search.withChoice(lucf,[|true;false|]) 
             |> Search.withChoice(lEzm,[|true;false|])
         SweepableEstimator(fac,ss)
@@ -148,6 +165,7 @@ module E =
             ctx.Transforms.ProjectToPrincipalComponents(col,?rank=rank,ensureZeroMean=ensureZeroMean) |> asEstimator
         let ss =
             Search.init()
+            |> Search.withId $"seProjPca {col}"
             |> Search.withChoice(lezm,[|true;false|])
             |> Search.withUniformInt(lrank,rLo,rHi)
         SweepableEstimator(fac, ss)
@@ -170,6 +188,7 @@ module E =
             ctx.Transforms.ApproximatedKernelMap(col,?rank=rank,useCosAndSinBases=useCosAndSinBases,?generator=generator) |> asEstimator
         let ss =
             Search.init()
+            |> Search.withId $"seKernelMap {col}"
             |> Search.withChoice(lcossin,[|true;false|])
             |> Search.withUniformInt(lrank,rLo,rHi)
             |> Search.withChoice(lgen,[|Kgaus; Klap|])
@@ -180,6 +199,7 @@ module E =
             ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnCount(col,count=count) |> asEstimator
         let ss =
             Search.init()
+            |> Search.withId $"seFtrSelCount {col}"
         SweepableEstimator(fac, ss)
 
     let seFtrSelMutualInf (col:string) label () =
@@ -187,6 +207,7 @@ module E =
             ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation(col,labelColumnName=label) |> asEstimator
         let ss =
             Search.init()
+            |> Search.withId $"seFtrSelMutualInf {col}"
         SweepableEstimator(fac, ss)
 
     let seMissingVals (col:string) () =
@@ -203,18 +224,20 @@ module E =
             |> Seq.toArray
         let ss =
             Search.init()
+            |> Search.withId $"seMissingVals {col}"
             |> Search.withChoice(lrmode,wvals)
             |> Search.withChoice(limpt,[|true;false|])            
         SweepableEstimator(fac, ss)
 
-    let seTextFeaturize (txtCol:string) () =
+    let seTextFeaturize (col:string) () =
         let fac (ctx:MLContext) (p:Parameter) =
-            ctx.Transforms.Text.FeaturizeText(txtCol) |> asEstimator
+            ctx.Transforms.Text.FeaturizeText(col) |> asEstimator
         let ss =
             Search.init()
+            |> Search.withId $"seTextFeaturize {col}"
         SweepableEstimator(fac, ss)
 
-    let seTextHashedNGrams (txtCol:string) () =
+    let seTextHashedNGrams (col:string) () =
         let lbits = "numberOfBits"
         let lngl = "ngramLength"
         let lskl = "skipLength"
@@ -226,13 +249,14 @@ module E =
             let skipLength = p.[lskl].AsType<int>()   |> zeroIsDefault
             let useAllLengths = p.[lalll].AsType<bool>()
             let useOrderedHashing = p.[loh].AsType<bool>()
-            let tx1 = ctx.Transforms.Text.TokenizeIntoCharactersAsKeys("tokens",txtCol)
-            let tx2 = ctx.Transforms.Text.ProduceHashedNgrams(txtCol,"tokens",?numberOfBits=numberOfBits,?ngramLength=ngramLength,
+            let tx1 = ctx.Transforms.Text.TokenizeIntoCharactersAsKeys("tokens",col)
+            let tx2 = ctx.Transforms.Text.ProduceHashedNgrams(col,"tokens",?numberOfBits=numberOfBits,?ngramLength=ngramLength,
                                                     ?skipLength=skipLength,useAllLengths=useAllLengths,
                                                     useOrderedHashing=useOrderedHashing)
             tx1 <!> tx2
         let ss =
             Search.init()
+            |> Search.withId $"seTextHashedNGrams {col}"
             |> Search.withUniformInt(lbits,0,4)
             |> Search.withUniformInt(lngl,0,5)
             |> Search.withUniformInt(lskl,0,5)
@@ -242,7 +266,7 @@ module E =
 
     ///search terms with input col defaulted to FEATURES 
     module Def =
-        let seNorm = seNorm FEATURES
+        let seNorm = seNormBin FEATURES
         let seGlobalContrast = seGlobalContrast FEATURES
         let seNormLogMeanVar = seNormLogMeanVar FEATURES
         let seNormLpNorm = seNormLpNorm FEATURES

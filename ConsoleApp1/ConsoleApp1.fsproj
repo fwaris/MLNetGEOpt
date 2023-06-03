@@ -10,6 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
+    <PackageReference Include="Plotly.NET" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MLNetGEOpt\MLNetGEOpt.fsproj" />
   </ItemGroup>
 

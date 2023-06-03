@@ -230,9 +230,15 @@ let ftrCols =
 
 let numCols = ftrCols |> Array.filter(fun c -> c<>"text")
 
+let seVec col () = 
+    let fac (ctx:MLContext) p =
+        ctx.Transforms.Concatenate(col,[|col|]) |> asEstimator
+    SweepableEstimator(fac,new SearchSpace())
+
 let normalizeCol col =
     Union [
-        (Opt (Estimator E.Def.seMissingVals))
+        Estimator (seVec col)
+        Opt (Estimator (E.seMissingVals col))
         Opt(
             Alt [
                 Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNorm col >>Estimator))
@@ -299,21 +305,23 @@ let expFac question dv timeout (p:SweepablePipeline) =
                  member this.ReportRunningTrial(setting) = s.Value <- setting            
             })
 
-
+;;
 let train lvlGrpu answ =
-    let dv2 = ctx.Data.FilterByCustomPredicate(dvAns2,fun (t:TFilter) -> t.level_group <> lvlGrpu)
-    let txTgt = ctx.Transforms.CustomMapping(setTarget answ,contractName=null)
-    let dv3 = txTgt.Fit(dv2).Transform(dv2)
-    Schema.printSchema dv3.Schema 
-    let oPl,oAcc,rslt = Optimize.run 5000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
-    let mdlPath = root @@ $"model_{answ}.bin"
-    let settingsPath = root @@ $"model_settings_{answ}.txt"
-    ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
-    let metric = rslt.Metric |> string
-    let settings = rslt.TrialSettings.Parameter.[E.PIPELINE].ToString()
-    let lines = [metric; settings]
-    File.WriteAllLines(settingsPath,lines)
-    rslt,oPl
+    async {
+        let dv2 = ctx.Data.FilterByCustomPredicate(dvAns2,fun (t:TFilter) -> t.level_group <> lvlGrpu)
+        let txTgt = ctx.Transforms.CustomMapping(setTarget answ,contractName=null)
+        let dv3 = txTgt.Fit(dv2).Transform(dv2)
+        Schema.printSchema dv3.Schema 
+        let! oPl,oAcc,rslt = Optimize.runAsync 5000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
+        let mdlPath = root @@ $"model_{answ}.bin"
+        let settingsPath = root @@ $"model_settings_{answ}.txt"
+        ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)
+        let metric = rslt.Metric |> string
+        let settings = rslt.TrialSettings.Parameter.[E.PIPELINE].ToString()
+        let lines = [metric; settings]
+        File.WriteAllLines(settingsPath,lines)
+        return rslt,oPl
+    }
 
 //train "0-4" 2
 
@@ -324,16 +332,22 @@ let lvlGrpAns =
         "13-22",[12..17]
     ]
     |> List.collect(fun (l,xs) -> xs |> List.map (fun y -> l,y))
+    
+let start() =
+   task {
+    let! rs = 
+        lvlGrpAns 
+        |> List.filter(fun (l,a) -> a = 12) 
+        |> List.map(fun (l,a) -> train l a)
+        |> Async.Parallel
+    return rs
+   } 
 
-let rslts = 
-    lvlGrpAns 
-    |> List.filter(fun (l,a) -> a <> 8) 
-    |> List.map(fun (l,a) -> train l a)
+let rs = start()
 
-
-
-
-
-
-
+(*
+Optimize.verbose <- true
+Optimize.verbose <- false
+rs.Result
+*)
 

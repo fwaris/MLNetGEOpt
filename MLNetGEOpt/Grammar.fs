@@ -14,6 +14,16 @@ type Grammar = Term list
     
 [<RequireQualifiedAccess>]
 module Grammar =
+    let rec private getId term =
+        match term with 
+        | Pipeline _ -> "Pipeline"
+        | Estimator e -> 
+            let e = e() 
+            let t = match e.SearchSpace.TryGetValue Search.TERM_ID with 
+                    | true,p -> p :?> Microsoft.ML.SearchSpace.Option.ChoiceOption
+                    | _      -> failwith "Estimator search term must have a paramater named Search.TERM_ID. See Search.withId function"
+            t.Choices.[0].AsType<string>()
+        | _ -> "unexpected"        
 
     let rec private tranlateTerm (genome:int[]) (acc,i) (t:Term) =
         let i = if i >= genome.Length then 0 else i  //wrap around
@@ -60,27 +70,20 @@ module Grammar =
             | Pipeline p -> (acc,p().Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
             | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called")
 
-    let printPipeline ctx terminals = 
+    let pipelineHash ctx terminals =
+        let mutable count = 0
+        let sb = System.Text.StringBuilder()
+        let (!+) (a:string) = sb.AppendLine(a) |> ignore
         terminals 
-        |> List.iter (function 
-            | Pipeline p -> p().Estimators |> Seq.iter(fun x-> printfn "%A" x.Value) 
-            | Estimator  e -> printfn "%A" (let e' = e() in e'.BuildFromOption(ctx,e'.Parameter))
-            | x            -> printfn "Non-terminal: %A" x)
+        |> List.iter (fun t -> 
+            let id = getId t
+            !+ ";"
+            !+ id)
+        sb.ToString()
 
-        let h,ts =
-            match terminals with
-            | Pipeline p::rest -> p(),rest
-            | (Estimator e1)::(Estimator e2)::rest -> (e1().Append(e2())),rest
-            | (Estimator e1)::(Pipeline e2)::rest  -> (e1().Append(e2())),rest
-            | _                                    -> failwith "Given list should be only Pipeline or Estimator terms with atleast two estimators or one pipeline"
-        (h,ts) 
-        ||> List.fold (fun acc t ->
-            match t with 
-            | Estimator e -> acc.Append(e())
-            | Pipeline p -> (acc,p().Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
-            | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called")
+    let printPipeline ctx terminals = printfn "%A" (pipelineHash ctx terminals)
 
-    let esimateGenomeSize (g:Grammar) =
+    let estimateGenomeSize (g:Grammar) =
         let rec skipHead xs = //skip no-choice terminals in the beginning from search space
             match xs with
             | [] -> []

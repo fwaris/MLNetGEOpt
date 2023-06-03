@@ -11,8 +11,8 @@
     <None Include="scripts\Sandbox.fsx" />
     <None Include="scripts\BinaryExp.fsx" />
     <None Include="scripts\icl.fsx" />
-    <Compile Include="Grammar.fs" />
     <Compile Include="SearchSpace.fs" />
+    <Compile Include="Grammar.fs" />
     <Compile Include="Optimize.fs" />
   </ItemGroup>
 
