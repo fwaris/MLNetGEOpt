@@ -228,6 +228,24 @@ let ftrCols =
         "fqid_count"; "room_fqid_count"; "text_fqid_count"; "fullscreen_count";
         "hq_count"; "music_count";|]
 
+let numCols = ftrCols |> Array.filter(fun c -> c<>"text")
+
+let normalizeCol col =
+    Union [
+        (Opt (Estimator E.Def.seMissingVals))
+        Opt(
+            Alt [
+                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNorm col >>Estimator))
+                Estimator (E.seNormLpNorm col)
+                Estimator (E.seNormLogMeanVar col)
+                Estimator (E.seNormMeanVar col)
+                //Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
+                Estimator (E.seNormMinMax col)
+                Estimator (E.seNormRobustScaling col)
+                Estimator (E.seNormSupBin col "target")
+            ])
+    ]
+
 let seBase() =    
     let fac (ctx:MLContext) p =         
         ctx.Transforms.Concatenate("Features",ftrCols) |> asEstimator
@@ -239,29 +257,18 @@ let grammar =
                 Estimator (E.seTextFeaturize "text")
                 Estimator (E.seTextHashedNGrams "text")
         ]            
+        Union [for c in numCols -> normalizeCol c]
         Estimator (seBase)
-        Opt(Estimator E.seMissingVals)
         Opt(
             Alt [
-                Estimator (E.seFtrSelCount 10)
-                Estimator (E.seFtrSelMutualInf "target")
-            ])
-        Opt(
-            Alt [
-                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNorm>>Estimator))
-                Estimator E.seNormLpNorm
-                Estimator E.seNormLogMeanVar
-                Estimator E.seNormMeanVar
-                //Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
-                Estimator E.seNormMinMax
-                Estimator E.seNormRobustScaling
-                Estimator (E.seNormSupBin "target")
+                Estimator (E.Def.seFtrSelCount 10)
+                Estimator (E.Def.seFtrSelMutualInf "target")
             ])
         Opt (
             Alt [
-                Estimator E.seWhiten
-                Estimator (E.seProjPca (2,10))
-                Estimator (E.seKernelMap (2,10))
+                Estimator E.Def.seWhiten
+                Estimator (E.Def.seProjPca (2,10))
+                Estimator (E.Def.seKernelMap (2,10))
             ])
         Pipeline seBinClassification
     ]
@@ -320,7 +327,7 @@ let lvlGrpAns =
 
 let rslts = 
     lvlGrpAns 
-    |> List.filter(fun (l,a) -> a = 8) 
+    |> List.filter(fun (l,a) -> a <> 8) 
     |> List.map(fun (l,a) -> train l a)
 
 

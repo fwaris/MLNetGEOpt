@@ -54,7 +54,7 @@ module Optimize =
             |> Map.tryFind genome
             |> Option.defaultWith(fun _ -> 
                 let terminals,_ = Grammar.translate g genome
-                let pipeline = Grammar.toPipeline terminals
+                let pipeline = Grammar.toPipeline terminals                
                 let exp = expFac pipeline                
                 try 
                     let rslt = exp.Run()

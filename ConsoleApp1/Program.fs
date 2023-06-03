@@ -28,25 +28,25 @@ let g =
         Estimator seBase       
         Opt(
             Alt [
-                Estimator (E.seFtrSelCount 10)
-                Estimator (E.seFtrSelMutualInf "Class")
+                Estimator (E.Def.seFtrSelCount 10)
+                Estimator (E.Def.seFtrSelMutualInf "Class")
             ])
         Opt(
             Alt [
-                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNorm>>Estimator))
-                Estimator E.seNormLpNorm
-                Estimator E.seNormLogMeanVar
-                Estimator E.seNormMeanVar
-                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.seGlobalContrast()>>Estimator))
-                Estimator E.seNormMinMax
-                Estimator E.seNormRobustScaling
-                Estimator (E.seNormSupBin "Class")
+                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.Def.seNorm>>Estimator))
+                Estimator E.Def.seNormLpNorm
+                Estimator E.Def.seNormLogMeanVar
+                Estimator E.Def.seNormMeanVar
+                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.Def.seGlobalContrast>>Estimator))
+                Estimator E.Def.seNormMinMax
+                Estimator E.Def.seNormRobustScaling
+                Estimator (E.Def.seNormSupBin "Class")
             ])
-        Opt (Estimator E.seWhiten)
+        Opt (Estimator E.Def.seWhiten)
         Opt (
             Alt [
-                Estimator (E.seProjPca (2,10))
-                Estimator (E.seKernelMap (2,10))
+                Estimator (E.Def.seProjPca (2,10))
+                Estimator (E.Def.seKernelMap (2,10))
             ])
         Pipeline seBinClassification
     ]
