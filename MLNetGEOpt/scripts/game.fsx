@@ -233,7 +233,10 @@ let numCols = ftrCols |> Array.filter(fun c -> c<>"text")
 let seVec col () = 
     let fac (ctx:MLContext) p =
         ctx.Transforms.Concatenate(col,[|col|]) |> asEstimator
-    SweepableEstimator(fac,new SearchSpace())
+    let ss = 
+        Search.init()
+        |> Search.withId $"Vectorize {col}"
+    SweepableEstimator(fac,ss)
 
 let normalizeCol col =
     Union [
@@ -241,7 +244,7 @@ let normalizeCol col =
         Opt (Estimator (E.seMissingVals col))
         Opt(
             Alt [
-                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNorm col >>Estimator))
+                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.seNormBin col >>Estimator))
                 Estimator (E.seNormLpNorm col)
                 Estimator (E.seNormLogMeanVar col)
                 Estimator (E.seNormMeanVar col)
@@ -254,8 +257,8 @@ let normalizeCol col =
 
 let seBase() =    
     let fac (ctx:MLContext) p =         
-        ctx.Transforms.Concatenate("Features",ftrCols) |> asEstimator
-    SweepableEstimator(fac,new SearchSpace())
+        ctx.Transforms.Concatenate(E.FEATURES,ftrCols) |> asEstimator
+    SweepableEstimator(fac,Search.init() |> Search.withId $"Concat %A{ftrCols}")
 
 let grammar = 
     [
@@ -294,14 +297,14 @@ let expFac question dv timeout (p:SweepablePipeline) =
         .SetBinaryClassificationMetric(BinaryClassificationMetric.AreaUnderPrecisionRecallCurve,"target")
         .SetDataset(dv,3)
         .SetTrainingTimeInSeconds(timeout)        
-        .SetPipeline(p)
+        .SetPipeline(p)       
         .SetMonitor(
             let s : TrialSettings ref = ref Unchecked.defaultof<_>
             let printLine (isDone:bool) (r:TrialResult) =  printfn $"""{question} M: {r.Metric} {isDone} - {s.Value.Parameter.[E.PIPELINE]}"""
             {new IMonitor with
                  member this.ReportBestTrial(result) = printLine true result 
                  member this.ReportCompletedTrial(result) = printLine false result 
-                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``; printfn $"%A{settings}"
+                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``.Message; printfn $"%A{settings}"
                  member this.ReportRunningTrial(setting) = s.Value <- setting            
             })
 
@@ -343,7 +346,8 @@ let start() =
     return rs
    } 
 
-let rs = start()
+let rs = start() 
+//rs |> Async.AwaitTask |> Async.RunSynchronously
 
 (*
 Optimize.verbose <- true

@@ -53,21 +53,21 @@ module Optimize =
 
         let fitness (pvals:float[]) = 
             let genome = pvals |> Array.map int
+            let terminals,_ = Grammar.translate g genome
+            let pHash = Grammar.pipelineHash (MLContext()) terminals
             if verbose then
                 printfn $"genome %A{genome}"
             fmap
-            |> Map.tryFind genome
+            |> Map.tryFind pHash
             |> Option.defaultWith(fun _ -> 
-                let terminals,_ = Grammar.translate g genome
                 let pipeline = Grammar.toPipeline terminals 
-                if verbose then
-                    pipeline.ToString() |> printfn "%A"
-                    //Grammar.printPipeline (MLContext()) terminals
+                if verbose then                    
+                    Grammar.printPipeline (MLContext()) terminals
 
                 let exp = expFac pipeline                
                 try 
                     let rslt = exp.Run()
-                    fmap <- fmap |> Map.add genome rslt.Metric
+                    fmap <- fmap |> Map.add pHash rslt.Metric
                     rsltAgnt.Post rslt
                     rslt.Metric
                 with ex ->

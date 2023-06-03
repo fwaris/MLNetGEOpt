@@ -77,7 +77,6 @@ module Grammar =
         terminals 
         |> List.iter (fun t -> 
             let id = getId t
-            !+ ";"
             !+ id)
         sb.ToString()
 
