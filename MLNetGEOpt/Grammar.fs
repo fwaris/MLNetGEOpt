@@ -25,34 +25,34 @@ module Grammar =
             t.Choices.[0].AsType<string>()
         | _ -> "unexpected"        
 
-    let rec private tranlateTerm (genome:int[]) (acc,i) (t:Term) =
+    let rec private tranlateTerm (genome:int[]) (acc,i,tcount) (t:Term) =
         let i = if i >= genome.Length then 0 else i  //wrap around
         match t with
-        | Pipeline _ | Estimator _ -> (t::acc),i 
+        | Pipeline _ | Estimator _ -> (t::acc),i,tcount
         | Opt t'  -> 
             if genome.[i] % 2 = 0 then 
-                tranlateTerm genome (acc,i+1) t'
+                tranlateTerm genome (acc,i+1,tcount+1) t'
             else
-                acc,(i+1)
+                acc,(i+1),tcount+1
         | Alt ts ->            
             if ts.Length = 0 then failwith "Alt term must have atleast 1 child term"
             if ts.Length = 1 then 
                 //Alt has only 1 term - there is no choice here
-                tranlateTerm genome (acc,i) ts.Head
+                tranlateTerm genome (acc,i,tcount) ts.Head
             else 
                 let t' = ts.[genome.[i] % ts.Length]     
-                tranlateTerm genome (acc,i+1) t'
+                tranlateTerm genome (acc,i+1,tcount+1) t'
         | Union ts -> 
             match ts with 
-            | [] -> acc,i
+            | [] -> acc,i,tcount
             | t::rest -> 
-                let acc,i = tranlateTerm genome (acc,i) t
-                tranlateTerm genome (acc,i+1) (Union rest)
+                let acc,i,tcount = tranlateTerm genome (acc,i,tcount) t
+                tranlateTerm genome (acc,i,tcount) (Union rest)
 
     let translate grammar genome  =
-        let terminals,len =
-            (([],0),grammar) 
-            ||> List.fold (fun (acc,i) t -> tranlateTerm genome (acc,i) t)
+        let terminals,i,len =
+            (([],0,0),grammar) 
+            ||> List.fold (fun (acc,i,tcount) t -> tranlateTerm genome (acc,i,tcount) t)
         List.rev terminals, len
         
 

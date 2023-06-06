@@ -1,4 +1,6 @@
-﻿#load "packages.fsx"
+﻿module Game
+
+//#load "packages.fsx"
 open System
 open System.IO
 open FSharp.Collections.ParallelSeq
@@ -348,13 +350,13 @@ let start() =
 
 let genomeSize = Grammar.estimateGenomeSize grammar
 
-
-let rs = start() 
-rs.Wait()
-let tcounts = rs.Result |> Seq.collect(fun (a,b,c) -> c |> Map.toSeq |> Seq.map (fun (k,v) -> v.TCount)) |> Seq.toArray
-tcounts |> Chart.Histogram |> Chart.withTitle "T Counts" |> Chart.show
-let fmaps = rs.Result |> Seq.collect( fun (a,b,c) -> c |> Map.toSeq) |> Seq.toArray
-fmaps |> Seq.filter(fun (a,b) -> b.TCount = 0) |> Seq.iter(fun (a,_) -> printfn "%s" a)
+let run() =
+    let rs = start() 
+    rs.Wait()
+    let tcounts = rs.Result |> Seq.collect(fun (a,b,c) -> c |> Map.toSeq |> Seq.map (fun (k,v) -> v.TCount)) |> Seq.toArray
+    tcounts |> Chart.Histogram |> Chart.withTitle "T Counts" |> Chart.show
+    let fmaps = rs.Result |> Seq.collect( fun (a,b,c) -> c |> Map.toSeq) |> Seq.toArray
+    fmaps |> Seq.filter(fun (a,b) -> b.TCount = 0) |> Seq.iter(fun (a,_) -> printfn "%s" a)
 (*
 Optimize.verbose <- true
 Optimize.verbose <- false

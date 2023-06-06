@@ -6,7 +6,7 @@ open Microsoft.ML
 open MLUtils.Pipeline
 
 type Search =
-    static member TERM_ID = "_mlopt_term_"
+    static member TERM_ID = "_term_id_"
     static member init() = new SearchSpace()
     static member withUniformFloat(s:string,lo,hi,?logBase,?defaultValue)  = fun (ss:SearchSpace) -> ss.Add(s,Option.UniformDoubleOption(lo,hi,?logBase=logBase,?defaultValue=defaultValue)); ss
     static member withUniformInt (s:string,lo,hi,?logBase,?defaultValue) =  fun (ss:SearchSpace) -> ss.Add(s,Option.UniformIntOption(lo,hi,?logBase=logBase,?defaultValue=defaultValue)); ss
