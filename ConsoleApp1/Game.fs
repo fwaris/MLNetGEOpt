@@ -14,7 +14,9 @@ open MLUtils.Pipeline
 open MathNet.Numerics
 open Plotly.NET
 
-let root = @"E:\s\kaggle\predict-student-performance-from-game-play"
+let data_drive = let d = Environment.GetEnvironmentVariable("DATA_DRIVE") in if d <> null then d else @"c:\"
+let root = $"{data_drive}s\kaggle\predict-student-performance-from-game-play"
+
 let (@@) a b = Path.Combine(a,b)
 
 let trainData = root @@ "train.csv"
