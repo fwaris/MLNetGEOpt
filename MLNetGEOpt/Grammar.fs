@@ -88,27 +88,26 @@ module Grammar =
             | [] -> []
             | Pipeline _::rest | Estimator _ :: rest -> skipHead  rest
             | xs -> xs 
-
         let g' = skipHead g
-        let rec maxDepth d xs =
+        let rec maxChoices d xs =
             match xs with 
             | [] -> d
             | Alt xs :: rest -> 
-                let d' = maxDepth (d+1) xs
-                let d'' = maxDepth d rest 
-                max d' d''
+                let d' = xs |> List.map (fun t -> maxChoices 0 [t]) |> List.max
+                let d'' = d + d' + 1
+                maxChoices d'' rest
             | Opt t :: rest ->
-                let d' = maxDepth (d+1) [t]
-                let d'' = maxDepth d rest
-                max d' d''
+                let d' = maxChoices 0 [t]
+                let d'' = d + d' + 1
+                maxChoices d'' rest
             | Union xs :: rest ->
-                let d' = maxDepth d xs
-                let d'' = maxDepth d rest
-                max d' d''
-            | Pipeline _::rest -> maxDepth d rest
-            | Estimator _::rest -> maxDepth d rest
+                let d' = xs |> List.sumBy (fun t -> maxChoices 0 [t])
+                let d'' = d + d'
+                maxChoices d'' rest
+            | Pipeline _::rest -> maxChoices d rest
+            | Estimator _::rest -> maxChoices d rest
 
-        maxDepth 0 g'
+        maxChoices 0 g'
 
 
 
