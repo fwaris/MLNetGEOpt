@@ -56,12 +56,12 @@ let expFac timeout (p:SweepablePipeline) =
     ctx.Auto()
         .CreateExperiment()
         .SetBinaryClassificationMetric(BinaryClassificationMetric.AreaUnderPrecisionRecallCurve,"Class")
-        .SetDataset(dv,3)
+        .SetDataset(dv,3)        
         .SetTrainingTimeInSeconds(timeout)        
         .SetPipeline(p)
         .SetMonitor(
             let s : TrialSettings ref = ref Unchecked.defaultof<_>
-            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""M: {r.Metric} {isDone} - {s.Value.Parameter.["_pipeline_"]}"""
+            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""M: {r.Metric} {isDone} - {s.Value.Parameter.[E.PIPELINE]}"""
             {new IMonitor with
                  member this.ReportBestTrial(result) = printLine true result 
                  member this.ReportCompletedTrial(result) = printLine false result 
@@ -74,7 +74,7 @@ let expFac timeout (p:SweepablePipeline) =
 //let e1 = expFac p1
 //e1.Run()
 
-let oPl,oAcc,rlst = Optimize.run 15000 CA.OptimizationKind.Maximize (expFac 600u) g
+let oPl,oAcc,rlst,cache = Optimize.run 11 15000 CA.OptimizationKind.Maximize (expFac 600u) g
 Grammar.printPipeline ctx oPl
 (*
 let opLS = Grammar.toPipeline oPl

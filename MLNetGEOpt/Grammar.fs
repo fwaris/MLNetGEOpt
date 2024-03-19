@@ -108,8 +108,3 @@ module Grammar =
             | Estimator _::rest -> maxChoices d rest
 
         maxChoices 0 g'
-
-
-
-
-
