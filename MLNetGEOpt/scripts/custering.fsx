@@ -17,19 +17,18 @@ dv.Schema |> Seq.iter (fun x -> printfn $""" "{x.Name}" //{x.Type} """)
 
 let numCols = 
     [
-        "num1"
+        "num1" // not actual names
         "num2"
     ]
 
 let catCols = 
     [
-        "cat1"
-        "cat2"
+        "cat1" //Int32 
     ]
 
 let ignoreCols = 
     [
-        "ban" //String 
+        "id" //String 
     ]
 
 let colInfo = ColumnInformation()
@@ -51,45 +50,65 @@ let seBase() =
         txConv <!> tx1H <!> txConcat
     SweepableEstimator(fac,Search.init() |> Search.withId $"Convert and concat")
 
-let seCluster () =         
+//returns sweepable estimator for KMeans
+//k is part of the search space
+//NOTE: the search space is not explored fully - search hovers around default value
+let seClusterWithSS () = 
     let K = "k"
     let fac (ctx:MLContext) (p:Parameter) = 
         let k = p.[K].AsType<int>()
         let opts = Trainers.KMeansTrainer.Options()
         opts.FeatureColumnName <- E.FEATURES
-        opts.MaximumNumberOfIterations <- 200
-        opts.NumberOfClusters <- k    
+        opts.MaximumNumberOfIterations <- 500
+        opts.NumberOfClusters <- k
+        printfn $"k={k}"
         ctx.Clustering.Trainers.KMeans(opts) |> asEstimator              
     let ss = 
         Search.init() 
         |> Search.withId $"Cluster size"
-        |> Search.withUniformInt(K,3,10,defaultValue=5)
+        |> Search.withUniformInt(K, 3, 20, defaultValue=10)        
+    SweepableEstimator(fac,ss)
+
+//returns sweepable estimator for KMeans with k as a parameter
+//create a new estimator for each k and add to the 'grammar'
+let seCluster (k:int) ()=         
+    let fac (ctx:MLContext) (p:Parameter) = 
+        let opts = Trainers.KMeansTrainer.Options()
+        opts.FeatureColumnName <- E.FEATURES
+        opts.MaximumNumberOfIterations <- 500
+        opts.NumberOfClusters <- k    
+        printfn $"k={k}"
+        ctx.Clustering.Trainers.KMeans(opts) |> asEstimator              
+    let ss = 
+        Search.init() 
+        |> Search.withId $"Cluster size {k}"        
     SweepableEstimator(fac,ss)
 
 let g = 
     [
         Estimator seBase
         //Pipeline featurizer
-        Opt(Estimator (E.Def.seFtrSelCount 3))
-        Opt(
-            Alt [
-                Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.Def.seNorm>>Estimator))
-                Estimator E.Def.seNormLpNorm
-                Estimator E.Def.seNormLogMeanVar
-                Estimator E.Def.seNormMeanVar
-                Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.Def.seGlobalContrast>>Estimator))
-                Estimator E.Def.seNormMinMax
-                Estimator E.Def.seNormRobustScaling
-            ])
-        //Opt (Estimator E.Def.seWhiten)
-        //Opt (
+        Opt(Estimator (E.Def.seFtrSelCount 3))        
+        Alt [
+            Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.Def.seNorm>>Estimator))
+            Estimator E.Def.seNormLpNorm
+            Estimator E.Def.seNormLogMeanVar
+            Estimator E.Def.seNormMeanVar
+            Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.Def.seGlobalContrast>>Estimator))
+            Estimator E.Def.seNormMinMax
+            Estimator E.Def.seNormRobustScaling
+        ]
+//        Opt (Estimator E.Def.seWhiten)
+        // Opt (
         //    Alt [
         //        Estimator (E.Def.seProjPca (2,10))
         //        Estimator (E.Def.seKernelMap (2,10))
         //    ])
-        Estimator seCluster
+        Alt [for i in 3 .. 20 -> Estimator (seCluster i)]  // this works 
+        //Estimator seClusterWithSS                        // this does not work
     ]
 
+//run a trial
 let runTrial (pipeline:SweepablePipeline) (settings:TrialSettings) =     
     task {
         let stopwatch = Stopwatch()
@@ -98,7 +117,12 @@ let runTrial (pipeline:SweepablePipeline) (settings:TrialSettings) =
         let pipeline = pipeline.BuildFromOption(ctx, parameter)
         let model = pipeline.Fit(dvTrain)
         let scored = model.Transform(dvTest)
-        let eval = ctx.Clustering.Evaluate(scored)
+        let eval = 
+            ctx.Clustering.Evaluate(
+                data = scored,
+                labelColumnName = "PredictedLabel",
+                scoreColumnName = "Score",
+                featureColumnName = E.FEATURES)
         return new TrialResult
                 (
                     Metric = eval.DaviesBouldinIndex,
@@ -109,11 +133,13 @@ let runTrial (pipeline:SweepablePipeline) (settings:TrialSettings) =
 
     }
 
+//trial runner wrapper class
 type KRunner (pipeline:SweepablePipeline) =
     interface ITrialRunner with
         member this.Dispose() = ()
         member this.RunAsync(settings, ct) = runTrial pipeline settings
 
+//experiment factory
 let expFac timeout (p:SweepablePipeline) =
     ctx.Auto()
         .CreateExperiment()
@@ -132,10 +158,8 @@ let expFac timeout (p:SweepablePipeline) =
                  member this.ReportRunningTrial(setting) = s.Value <- setting            
             })
 
-//let genomeSize = Grammar.estimateGenomeSize g
-let oPl,oAcc,rlst,cache = Optimize.run 11 15000 CA.OptimizationKind.Minimize (expFac 60u) g
+let genomeSize = Grammar.estimateGenomeSize g + 1
+let oPl,oAcc,rlst,cache = Optimize.run genomeSize 20000 CA.OptimizationKind.Minimize (expFac (10u * 60u)) g
+
 Grammar.printPipeline ctx oPl
-
-
-
-
+rlst.TrialSettings
