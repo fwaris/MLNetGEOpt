@@ -10,25 +10,40 @@ open MLUtils
 open MLUtils.Pipeline
 
 let ctx = MLContext()
-let path = @"C:\s\data.dv"
+//let path = @"C:\s\custgpt\journeys.dv"
+let path = @"/home/dwspradmin/apps/custgpt/journeys.dv"
 let dv = ctx.Data.LoadFromBinary path
 let dvTrain,dvTest = let tt = ctx.Data.TrainTestSplit(dv,0.1) in tt.TrainSet, tt.TestSet
 dv.Schema |> Seq.iter (fun x -> printfn $""" "{x.Name}" //{x.Type} """)
 
 let numCols = 
     [
-        "num1" // not actual names
-        "num2"
+        "DurationDays" //Int32 
+        "CareVoice" //Int32 
+        "myTMO" //Int32 
+        "Msg" //Int32 
+        "App" //Int32 
+        "Retail" //Int32 
+        "IVR" //Int32 
+        "TxnInvolved_Ind" //Int32 
+        "Interactions" //Int32 
+        "ActiveDays" //Int32 
+        "Transfers" //Int32 
+        //"TimeSpentInSec" //Int64 
+        //"PossibleBOTorTestAcct" //Int32     
     ]
 
 let catCols = 
     [
-        "cat1" //Int32 
+        "JourneyReasonID" //Int32 
     ]
 
 let ignoreCols = 
     [
-        "id" //String 
+        "ban" //String 
+        "JourneyStartDate" //DateTime 
+        "JourneyEndDate" //DateTime 
+        "Channels" //String 
     ]
 
 let colInfo = ColumnInformation()
@@ -39,35 +54,24 @@ colInfo.LabelColumnName <- "ban"
 
 let featurizer() =  ctx.Auto().Featurizer(dv, colInfo, E.FEATURES)
 
-let seBase() =    
-    let fac (ctx:MLContext) p =         
-        let allCols = numCols @ catCols |> List.toArray
-        let numCols = numCols |> List.map InputOutputColumnPair |> List.toArray
-        let catCols = catCols |> List.map InputOutputColumnPair |> List.toArray        
-        let txConv = ctx.Transforms.Conversion.ConvertType(numCols, outputKind=DataKind.Single)
-        let tx1H= ctx.Transforms.Categorical.OneHotEncoding(catCols)
-        let txConcat = ctx.Transforms.Concatenate(E.FEATURES, allCols)
-        txConv <!> tx1H <!> txConcat
-    SweepableEstimator(fac,Search.init() |> Search.withId $"Convert and concat")
-
-//returns sweepable estimator for KMeans
-//k is part of the search space
-//NOTE: the search space is not explored fully - search hovers around default value
-let seClusterWithSS () = 
-    let K = "k"
-    let fac (ctx:MLContext) (p:Parameter) = 
-        let k = p.[K].AsType<int>()
-        let opts = Trainers.KMeansTrainer.Options()
-        opts.FeatureColumnName <- E.FEATURES
-        opts.MaximumNumberOfIterations <- 500
-        opts.NumberOfClusters <- k
-        printfn $"k={k}"
-        ctx.Clustering.Trainers.KMeans(opts) |> asEstimator              
+let seConvertNum() = 
+    let fac (ctx:MLContext) p =                 
+        let numCols = numCols |> List.map InputOutputColumnPair |> List.toArray        
+        ctx.Transforms.Conversion.ConvertType(numCols, outputKind=DataKind.Single) 
+        |> asEstimator
     let ss = 
         Search.init() 
-        |> Search.withId $"Cluster size"
-        |> Search.withUniformInt(K, 3, 20, defaultValue=10)        
+        |> Search.withId $"Convert to single"
     SweepableEstimator(fac,ss)
+
+let seConcat() =    
+    let fac (ctx:MLContext) p =         
+        let allCols = numCols @ catCols |> List.toArray
+        let catCols = catCols |> List.map InputOutputColumnPair |> List.toArray        
+        let tx1H= ctx.Transforms.Categorical.OneHotEncoding(catCols)
+        let txConcat = ctx.Transforms.Concatenate(E.FEATURES, allCols)
+        tx1H <!> txConcat
+    SweepableEstimator(fac,Search.init() |> Search.withId $"1H and concat")
 
 //returns sweepable estimator for KMeans with k as a parameter
 //create a new estimator for each k and add to the 'grammar'
@@ -75,40 +79,55 @@ let seCluster (k:int) ()=
     let fac (ctx:MLContext) (p:Parameter) = 
         let opts = Trainers.KMeansTrainer.Options()
         opts.FeatureColumnName <- E.FEATURES
-        opts.MaximumNumberOfIterations <- 500
+//        opts.MaximumNumberOfIterations <- 500
         opts.NumberOfClusters <- k    
         printfn $"k={k}"
-        ctx.Clustering.Trainers.KMeans(opts) |> asEstimator              
+        ctx.Clustering.Trainers.KMeans(opts) 
+        |> asEstimator              
     let ss = 
         Search.init() 
         |> Search.withId $"Cluster size {k}"        
     SweepableEstimator(fac,ss)
 
+//individual field normalizers
+let fieldNorm col = 
+        Alt [
+            Alt ([None; yield! [for i in 10 .. 10 .. 100 -> Some i]] 
+            |> List.collect(fun maxBins -> 
+                [
+                    Estimator(Eh.seNormBin col true maxBins)
+                    Estimator(Eh.seNormBin col false maxBins)
+                ]))
+            Estimator (Eh.seNormLogMeanVar col true)
+            Estimator (Eh.seNormLogMeanVar col false)
+            Estimator (Eh.seNormMeanVar col true true)
+            Estimator (Eh.seNormMeanVar col true false)
+            Estimator (Eh.seNormMeanVar col false true)
+            Estimator (Eh.seNormMeanVar col false false)
+            Estimator (Eh.seNormMinMax col true)
+            Estimator (Eh.seNormMinMax col false)
+            Estimator (Eh.seNormRobustScaling col true)
+            Estimator (Eh.seNormRobustScaling col false)
+        ]
+        
 let g = 
     [
-        Estimator seBase
-        //Pipeline featurizer
-        Opt(Estimator (E.Def.seFtrSelCount 3))        
-        Alt [
-            Alt ([(1,10); (11,20); (21,30); (31,100)] |> List.map(E.Def.seNorm>>Estimator))
-            Estimator E.Def.seNormLpNorm
-            Estimator E.Def.seNormLogMeanVar
-            Estimator E.Def.seNormMeanVar
-            Alt([0.1f .. 0.5f .. 4.0f] |> List.pairwise |> List.map(fun (a,b) -> a, b - 0.001f)  |> List.map(E.Def.seGlobalContrast>>Estimator))
-            Estimator E.Def.seNormMinMax
-            Estimator E.Def.seNormRobustScaling
-        ]
-//        Opt (Estimator E.Def.seWhiten)
-        // Opt (
-        //    Alt [
-        //        Estimator (E.Def.seProjPca (2,10))
-        //        Estimator (E.Def.seKernelMap (2,10))
-        //    ])
+        Estimator seConvertNum
+        yield! numCols |> List.map fieldNorm 
+        Estimator seConcat        
+        Opt(
+            Alt [
+                Estimator (Eh.Def.seGlobalContrast true true None)
+                Estimator (Eh.Def.seGlobalContrast true false None)
+                Estimator (Eh.Def.seGlobalContrast false true None)
+                Estimator (Eh.Def.seGlobalContrast false false None)
+                Estimator (Eh.Def.seNormLpNorm None true)
+                Estimator (Eh.Def.seNormLpNorm None false)
+            ]
+        )
         Alt [for i in 3 .. 20 -> Estimator (seCluster i)]  // this works 
-        //Estimator seClusterWithSS                        // this does not work
     ]
 
-//run a trial
 let runTrial (pipeline:SweepablePipeline) (settings:TrialSettings) =     
     task {
         let stopwatch = Stopwatch()
@@ -133,13 +152,11 @@ let runTrial (pipeline:SweepablePipeline) (settings:TrialSettings) =
 
     }
 
-//trial runner wrapper class
 type KRunner (pipeline:SweepablePipeline) =
     interface ITrialRunner with
         member this.Dispose() = ()
         member this.RunAsync(settings, ct) = runTrial pipeline settings
 
-//experiment factory
 let expFac timeout (p:SweepablePipeline) =
     ctx.Auto()
         .CreateExperiment()
@@ -150,16 +167,26 @@ let expFac timeout (p:SweepablePipeline) =
         .SetTrialRunner(new KRunner(p))
         .SetMonitor(
             let s : TrialSettings ref = ref Unchecked.defaultof<_>
-            let printLine (isDone:bool) (r:TrialResult) =  printfn $"""M: {r.Metric} {isDone} - {s.Value.Parameter.[E.PIPELINE]}"""
+            let printLine (isDone:bool) (r:TrialResult) =  
+                printfn $"""M: {r.Metric} {isDone} - {s.Value.Parameter.[E.PIPELINE]}"""
             {new IMonitor with
                  member this.ReportBestTrial(result) = printLine true result 
                  member this.ReportCompletedTrial(result) = printLine false result 
-                 member this.ReportFailTrial(settings, ``exception``) = printfn "%A" ``exception``
+                 member this.ReportFailTrial(settings, ``exception``) = 
+                    printfn "%A" ``exception``
                  member this.ReportRunningTrial(setting) = s.Value <- setting            
             })
 
-let genomeSize = Grammar.estimateGenomeSize g + 1
-let oPl,oAcc,rlst,cache = Optimize.run genomeSize 20000 CA.OptimizationKind.Minimize (expFac (10u * 60u)) g
-
+let genomeSize = 50 // Grammar.estimateGenomeSize g + 1
+let oPl,oAcc,rlst,cache = 
+    Optimize.run 
+        genomeSize 
+        100000 
+        CA.OptimizationKind.Minimize 
+        (expFac (10u * 60u)) 
+        g
+;;
+printfn $"Metric {oAcc}"
+printfn $"Cache size {cache.Count}"
 Grammar.printPipeline ctx oPl
 rlst.TrialSettings

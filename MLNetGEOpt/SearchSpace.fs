@@ -33,6 +33,7 @@ module E =
             let fixZero = p.[lF].AsType<bool>()
             let mbc = p.[lM].AsType<int>() 
             let mbc = if mbc = 1 then None else Some(mbc)
+            printfn $"seNormBin {col} {lF}={fixZero}, {1M}={mbc}"
             ctx.Transforms.NormalizeBinning(col,fixZero=fixZero,?maximumBinCount=mbc) |> asEstimator        
         let ss = 
             Search.init() 
@@ -49,6 +50,7 @@ module E =
             let ezm = p.[lZm].AsType<bool>()
             let eusd = p.[lSd].AsType<bool>() 
             let scale = p.[lScl].AsType<float32>() |> zeroIsDefault
+            printfn $"seGlobalContrast {col} {lZm}={ezm}, {lSd}={eusd}, {lScl}={scale}"
             ctx.Transforms.NormalizeGlobalContrast(col,ensureZeroMean=ezm,ensureUnitStandardDeviation=eusd,?scale=scale) |> asEstimator
         let ss = 
             Search.init() 
@@ -62,6 +64,7 @@ module E =
         let lucf = "useCdf"
         let fac (ctx:MLContext) (p:Parameter) = 
             let useCdf = p.[lucf].AsType<bool>()
+            printfn $"seNormLogMeanVar {col} {lucf}={useCdf}"
             ctx.Transforms.NormalizeLogMeanVariance(col,useCdf=useCdf) |> asEstimator
         let ss = 
             Search.init() 
@@ -75,6 +78,7 @@ module E =
         let fac (ctx:MLContext) (p:Parameter) = 
             let ezm = p.[lEzm].AsType<bool>()
             let norm = p.[lNorm].AsType<Microsoft.ML.Transforms.LpNormNormalizingEstimatorBase.NormFunction>()
+            printfn $"seNormLpNorm {col} {lEzm}={ezm}, {lNorm}={norm}"
             ctx.Transforms.NormalizeLpNorm(col,norm=norm,ensureZeroMean=ezm) |> asEstimator
         let normVals = 
             Enum.GetValues(typeof<Microsoft.ML.Transforms.LpNormNormalizingEstimatorBase.NormFunction>) 
@@ -92,6 +96,7 @@ module E =
         let lcntr = "centerData"
         let fac (ctx:MLContext) (p:Parameter) = 
             let centerData = p.[lcntr].AsType<bool>()
+            printfn $"seNormRobustScaling {col} {lcntr}={centerData}"
             ctx.Transforms.NormalizeRobustScaling(col,centerData=centerData) |> asEstimator
         let ss = 
             Search.init() 
@@ -103,6 +108,7 @@ module E =
         let lfixz = "fixZero"
         let fac (ctx:MLContext) (p:Parameter) = 
             let fixZero = p.[lfixz].AsType<bool>()
+            printfn $"seNormMinMax {col} {lfixz}={fixZero}"
             ctx.Transforms.NormalizeMinMax(col,fixZero=fixZero) |> asEstimator
         let ss = 
             Search.init() 
@@ -114,6 +120,7 @@ module E =
         let lfixz = "fixZero"
         let fac (ctx:MLContext) (p:Parameter) = 
             let fixZero = p.[lfixz].AsType<bool>()
+            printfn $"seNormSupBin {col} {lfixz}={fixZero}"
             ctx.Transforms.NormalizeSupervisedBinning(col,fixZero=fixZero,labelColumnName=label) |> asEstimator
         let ss = 
             Search.init() 
@@ -128,6 +135,7 @@ module E =
             let kind = p.[lkind].AsType<Microsoft.ML.Transforms.WhiteningKind>()
             let rank = p.[lrank].AsType<int>()
             let rank = if kind = Transforms.WhiteningKind.PrincipalComponentAnalysis then Some rank else None
+            printfn $"seWhiten {col} {lkind}={kind}, {lrank}={rank}"
             ctx.Transforms.VectorWhiten(col,kind=kind,?rank=rank) |> asEstimator
         let wvals = 
             Enum.GetValues(typeof<Transforms.WhiteningKind>) 
@@ -147,6 +155,7 @@ module E =
         let fac (ctx:MLContext) (p:Parameter) = 
             let useCdf = p.[lucf].AsType<bool>()
             let ezm = p.[lEzm].AsType<bool>()
+            printfn $"seNormMeanVar {col} {lucf}={useCdf}, {lEzm}={ezm}"
             ctx.Transforms.NormalizeMeanVariance(col,useCdf=useCdf,fixZero=ezm) |> asEstimator
         let ss = 
             Search.init() 
@@ -264,20 +273,188 @@ module E =
             |> Search.withChoice(loh,[|true;false|])
         SweepableEstimator(fac, ss)
 
+///Module where search space is part of the grammar terms (avoids issue that ML.Net is not exploring search space well)
+[<RequireQualifiedAccess>]
+module Eh =
+    (*
+    zeroIsDefault 0.f
+    zeroIsDefault 0
+    zeroIsDefault 0.0
+    zeroIsDefault 1.0    
+    *)
+
+    let seNormBin (col:string) fixZero maximumBinCount () =         
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeBinning(col,fixZero=fixZero,?maximumBinCount=maximumBinCount) |> asEstimator        
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormBin {col} fixZero={fixZero} maximumBinCount={maximumBinCount}"
+        SweepableEstimator(fac,ss)
+
+    let seGlobalContrast (col:string) ensureZeroMean ensureUnitStandardDeviation scale () =         
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeGlobalContrast(col,ensureZeroMean=ensureZeroMean,ensureUnitStandardDeviation=ensureUnitStandardDeviation,?scale=scale) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seGlobalContrast {col} ensureZeroMean={ensureZeroMean} ensureUnitStandardDeviation={ensureUnitStandardDeviation} scale={scale}"
+        SweepableEstimator(fac,ss)
+
+    let seNormLogMeanVar (col:string) useCdf () =             
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeLogMeanVariance(col,useCdf=useCdf) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormLogMeanVar {col} useCdf={useCdf}"
+        SweepableEstimator(fac,ss)
+
+    let SENormLpNorm_Norms() = 
+        [
+            yield! Enum.GetValues(typeof<Transforms.LpNormNormalizingEstimatorBase.NormFunction>) 
+            |> Seq.cast<Transforms.LpNormNormalizingEstimatorBase.NormFunction>
+            |> Seq.map Some
+
+        ]
+    let seNormLpNorm (col:string) norm ensureZeroMean () = 
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeLpNorm(col,?norm=norm,ensureZeroMean=ensureZeroMean) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormLpNorm {col} norm={norm} ensureZeroMean={ensureZeroMean}"
+        SweepableEstimator(fac,ss)
+
+    let seNormRobustScaling (col:string) centerData () =           
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeRobustScaling(col,centerData=centerData) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormRobustScaling {col} centerData={centerData}"
+        SweepableEstimator(fac,ss)
+    
+    let seNormMinMax (col:string) fixZero ()=
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeMinMax(col,fixZero=fixZero) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormMinMax {col} fixZero={fixZero}"
+        SweepableEstimator(fac,ss)
+
+    let seNormSupBin (col:string) labelColumnName fixZero maximumBinCount () =        
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeSupervisedBinning(col,?fixZero=fixZero, ?maximumBinCount=maximumBinCount,labelColumnName=labelColumnName) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormSupBin {col} labelColumnName={labelColumnName} fixZero={fixZero} maximumBinCount={maximumBinCount}"            
+        SweepableEstimator(fac,ss)
+
+    let SEWhiten_Kinds() =
+        [
+            yield! Enum.GetValues(typeof<Transforms.WhiteningKind>) 
+            |> Seq.cast<Transforms.WhiteningKind>
+            |> Seq.map Some
+
+        ]    
+    let seWhiten (col:string) kind rank () = 
+        let fac (ctx:MLContext) (p:Parameter) =         
+            ctx.Transforms.VectorWhiten(col,?kind=kind,?rank=rank) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seWhiten {col} kind={kind} rank={rank}"
+        SweepableEstimator(fac,ss)
+
+    let seNormMeanVar (col:string) fixZero useCdf ()= 
+        let fac (ctx:MLContext) (p:Parameter) = 
+            ctx.Transforms.NormalizeMeanVariance(col,fixZero=fixZero,useCdf=useCdf) |> asEstimator
+        let ss = 
+            Search.init() 
+            |> Search.withId $"seNormMeanVar {col} fixZero={fixZero} useCdf={useCdf}"
+        SweepableEstimator(fac,ss)
+
+    let seProjPca (col:string) rank ensureZeroMean () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.ProjectToPrincipalComponents(col,?rank=rank,?ensureZeroMean=ensureZeroMean) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seProjPca {col} rank={rank} ensureZeroMean={ensureZeroMean}"
+        SweepableEstimator(fac, ss)
+
+    let SEKernelMap_Generators() = 
+        [
+            Transforms.GaussianKernel() :> Transforms.KernelBase |> Some
+            Transforms.LaplacianKernel() :> Transforms.KernelBase |> Some
+        ]
+    let seKernelMap (col:string) rank useCosAndSinBases generator () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.ApproximatedKernelMap(col,?rank=rank,useCosAndSinBases=useCosAndSinBases,?generator=generator) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seKernelMap {col} rank={rank} useCosAndSinBases={useCosAndSinBases} generator={generator}"
+        SweepableEstimator(fac, ss)
+
+    let seFtrSelCount (col:string) count () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnCount(col,count=count) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seFtrSelCount {col} count={count}"
+        SweepableEstimator(fac, ss)
+
+    let seFtrSelMutualInf (col:string) labelColumnName () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.FeatureSelection.SelectFeaturesBasedOnMutualInformation(col,labelColumnName=labelColumnName) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seFtrSelMutualInf {col} labelColumnName={labelColumnName}"
+        SweepableEstimator(fac, ss)
+
+    let SEMissingVals_ReplacementModes() = 
+        [            
+            yield! Enum.GetValues(typeof<Transforms.MissingValueReplacingEstimator.ReplacementMode>) 
+            |> Seq.cast<Transforms.MissingValueReplacingEstimator.ReplacementMode>
+            |> Seq.map Some
+
+        ]
+    let seMissingVals (col:string) replacementMode imputeBySlot () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.ReplaceMissingValues(col,?replacementMode=replacementMode,imputeBySlot=imputeBySlot) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seMissingVals {col} replacementMode={replacementMode} imputeBySlot={imputeBySlot}"
+        SweepableEstimator(fac, ss)
+
+    let seTextFeaturize (col:string) () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            ctx.Transforms.Text.FeaturizeText(col) |> asEstimator
+        let ss =
+            Search.init()
+            |> Search.withId $"seTextFeaturize {col}"
+        SweepableEstimator(fac, ss)
+
+    let seTextHashedNGrams (col:string) numberOfBits ngramLength skipLength useAllLengths useOrderedHashing () =
+        let fac (ctx:MLContext) (p:Parameter) =
+            let tx1 = ctx.Transforms.Text.TokenizeIntoCharactersAsKeys("tokens",col)
+            let tx2 = ctx.Transforms.Text.ProduceHashedNgrams(col,"tokens",?numberOfBits=numberOfBits,?ngramLength=ngramLength,
+                                                    ?skipLength=skipLength,useAllLengths=useAllLengths,
+                                                    useOrderedHashing=useOrderedHashing)
+            tx1 <!> tx2
+        let ss =
+            Search.init()
+            |> Search.withId $"seTextHashedNGrams {col} numberOfBits={numberOfBits} ngramLength={ngramLength} skipLength={skipLength} useAllLengths={useAllLengths} useOrderedHashing={useOrderedHashing}"
+        SweepableEstimator(fac, ss)
+
     ///search terms with input col defaulted to FEATURES 
     module Def =
-        let seNorm = seNormBin FEATURES
-        let seGlobalContrast = seGlobalContrast FEATURES
-        let seNormLogMeanVar = seNormLogMeanVar FEATURES
-        let seNormLpNorm = seNormLpNorm FEATURES
-        let seNormRobustScaling = seNormRobustScaling FEATURES
-        let seNormMinMax = seNormMinMax FEATURES
-        let seNormSupBin = seNormSupBin FEATURES
-        let seWhiten = seWhiten FEATURES
-        let seNormMeanVar = seNormMeanVar FEATURES
-        let seProjPca = seProjPca FEATURES
-        let seKernelMap = seKernelMap FEATURES
-        let seFtrSelCount = seFtrSelCount FEATURES
-        let seFtrSelMutualInf = seFtrSelMutualInf FEATURES
-        let seMissingVals = seMissingVals FEATURES
+        let seNormBin = seNormBin E.FEATURES
+        let seGlobalContrast = seGlobalContrast E.FEATURES
+        let seNormLogMeanVar = seNormLogMeanVar E.FEATURES
+        let seNormLpNorm = seNormLpNorm E.FEATURES
+        let seNormRobustScaling = seNormRobustScaling E.FEATURES
+        let seNormMinMax = seNormMinMax E.FEATURES
+        let seNormSupBin = seNormSupBin E.FEATURES
+        let seWhiten = seWhiten E.FEATURES
+        let seNormMeanVar = seNormMeanVar E.FEATURES
+        let seProjPca = seProjPca E.FEATURES
+        let seKernelMap = seKernelMap E.FEATURES
+        let seFtrSelCount = seFtrSelCount E.FEATURES
+        let seFtrSelMutualInf = seFtrSelMutualInf E.FEATURES
+        let seMissingVals = seMissingVals E.FEATURES
 
