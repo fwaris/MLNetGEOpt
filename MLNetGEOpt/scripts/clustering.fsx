@@ -10,40 +10,26 @@ open MLUtils
 open MLUtils.Pipeline
 
 let ctx = MLContext()
-//let path = @"C:\s\custgpt\journeys.dv"
-let path = @"/home/dwspradmin/apps/custgpt/journeys.dv"
+let path = @"C:\s\data.dv"
+
 let dv = ctx.Data.LoadFromBinary path
 let dvTrain,dvTest = let tt = ctx.Data.TrainTestSplit(dv,0.1) in tt.TrainSet, tt.TestSet
 dv.Schema |> Seq.iter (fun x -> printfn $""" "{x.Name}" //{x.Type} """)
 
 let numCols = 
     [
-        "DurationDays" //Int32 
-        "CareVoice" //Int32 
-        "myTMO" //Int32 
-        "Msg" //Int32 
-        "App" //Int32 
-        "Retail" //Int32 
-        "IVR" //Int32 
-        "TxnInvolved_Ind" //Int32 
-        "Interactions" //Int32 
-        "ActiveDays" //Int32 
-        "Transfers" //Int32 
-        //"TimeSpentInSec" //Int64 
-        //"PossibleBOTorTestAcct" //Int32     
+        "num1"
+        "num2"
     ]
 
 let catCols = 
     [
-        "JourneyReasonID" //Int32 
+        "cat1"        
     ]
 
 let ignoreCols = 
     [
         "ban" //String 
-        "JourneyStartDate" //DateTime 
-        "JourneyEndDate" //DateTime 
-        "Channels" //String 
     ]
 
 let colInfo = ColumnInformation()

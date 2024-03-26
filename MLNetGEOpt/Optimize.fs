@@ -89,6 +89,7 @@ module Optimize =
         let mutable step = CALib.API.initCA(parms, fitness, kind,36)
         for i in 0 .. trials-1 do 
             step <- CALib.API.Step step
+            System.GC.Collect()
         
         let gbest = step.Best.[0].MParms |> Array.map int
         let gbestTerms,_ = Grammar.translate g gbest 
