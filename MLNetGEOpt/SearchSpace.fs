@@ -273,6 +273,23 @@ module E =
             |> Search.withChoice(loh,[|true;false|])
         SweepableEstimator(fac, ss)
 
+    module Def =
+        let seNormBin = seNormBin FEATURES
+        let seGlobalContrast = seGlobalContrast FEATURES
+        let seNormLogMeanVar = seNormLogMeanVar FEATURES
+        let seNormLpNorm = seNormLpNorm FEATURES
+        let seNormRobustScaling = seNormRobustScaling FEATURES
+        let seNormMinMax = seNormMinMax FEATURES
+        let seNormSupBin = seNormSupBin FEATURES
+        let seWhiten = seWhiten FEATURES
+        let seNormMeanVar = seNormMeanVar FEATURES
+        let seProjPca = seProjPca FEATURES
+        let seKernelMap = seKernelMap FEATURES
+        let seFtrSelCount = seFtrSelCount FEATURES
+        let seFtrSelMutualInf = seFtrSelMutualInf FEATURES
+        let seMissingVals = seMissingVals FEATURES
+
+
 ///Module where search space is part of the grammar terms (avoids issue that ML.Net is not exploring search space well)
 [<RequireQualifiedAccess>]
 module Eh =

@@ -6,8 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Game.fs" />
-    <Compile Include="GenomeSize.fs" />
+    <Compile Include="Customer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

@@ -316,7 +316,7 @@ let train lvlGrpu answ =
         let txTgt = ctx.Transforms.CustomMapping(setTarget answ,contractName=null)
         let dv3 = txTgt.Fit(dv2).Transform(dv2)
         Schema.printSchema dv3.Schema 
-        let! oPl,oAcc,rslt,fmap = Optimize.runAsync 11 25000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
+        let! oPl,oAcc,rslt,fmap = Optimize.runAsync 11 None 25000 CA.OptimizationKind.Maximize (expFac answ dv3 600u) grammar
         let mdlPath = root @@ $"model_{answ}.bin"
         let settingsPath = root @@ $"model_settings_{answ}.txt"
         ctx.Model.Save(rslt.Model,dv3.Schema,mdlPath)

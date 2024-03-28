@@ -6,9 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="scripts\customer.fsx" />
+    <None Include="scripts\clustering.fsx" />
     <None Include="scripts\game.fsx" />
     <None Include="scripts\packages.fsx" />
-    <None Include="scripts\custering.fsx" />
+    <None Include="scripts\clustering.fsx" />
     <None Include="scripts\icl.fsx" />
     <Compile Include="SearchSpace.fs" />
     <Compile Include="Grammar.fs" />
@@ -16,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CAOpt" Version="1.0.1" />
+    <PackageReference Include="CAOpt" Version="2.0.0" />
     <PackageReference Include="Microsoft.ML.AutoML" Version="0.21.1" />
     <PackageReference Include="MLUtils" Version="0.21.0" />
   </ItemGroup>

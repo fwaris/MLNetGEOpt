@@ -167,6 +167,7 @@ let genomeSize = 50 // Grammar.estimateGenomeSize g + 1
 let oPl,oAcc,rlst,cache = 
     Optimize.run 
         genomeSize 
+        None
         100000 
         CA.OptimizationKind.Minimize 
         (expFac (10u * 60u)) 

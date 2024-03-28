@@ -2,6 +2,6 @@
 
 [<EntryPoint>]
 let main(args) =
-    GenomeSize.run()
+    Customer.run()
     //Game.run()
     0

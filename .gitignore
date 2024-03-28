@@ -362,3 +362,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /MLNetGEOpt/scripts/custering.fsx
+/MLNetGEOpt/scripts/customer.fsx
