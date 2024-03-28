@@ -77,7 +77,6 @@ module Optimize =
                 let exp = expFac pipeline                
                 try 
                     let rslt = exp.Run()                    
-                    System.GC.Collect()
                     fmap <- fmap |> Map.add pHash {Result=rslt; TCount=tcount; PipelineHash = pHash}
                     rsltAgnt.Post rslt
                     rslt.Metric
@@ -85,9 +84,13 @@ module Optimize =
                     printfn $"Ex {ex.Message}"
                     printfn $"%A{Grammar.printPipeline (MLContext()) terminals}"
                     worstVal                    
-                )            
-             
-        let mutable step = CALib.API.initCA(parms, fitness, kind,36)
+                )  
+        let fitness' args = 
+            let r = fitness args
+            System.GC.Collect()
+            r
+
+        let mutable step = CALib.API.initCA(parms, fitness', kind,36)
         for i in 0 .. trials-1 do 
             step <- CALib.API.Step(step,?maxParallelism=maxParallelism)
             System.GC.Collect()
