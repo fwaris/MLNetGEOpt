@@ -6,6 +6,7 @@ open Microsoft.ML.AutoML
 type Term = 
     | Opt of Term 
     | Pipeline of (unit -> SweepablePipeline)
+    | PipelineN of string* (unit -> SweepablePipeline)
     | Estimator of (unit -> SweepableEstimator)
     | Alt of Term list
     | Union of Term list
@@ -17,6 +18,7 @@ module Grammar =
     let rec private getId term =
         match term with 
         | Pipeline _ -> "Pipeline"
+        | PipelineN (n,_) -> $"Pipeline {n}"
         | Estimator e -> 
             let e = e() 
             let t = match e.SearchSpace.TryGetValue Search.TERM_ID with 
@@ -28,7 +30,7 @@ module Grammar =
     let rec private tranlateTerm (genome:int[]) (acc,i,tcount) (t:Term) =
         let i = if i >= genome.Length then 0 else i  //wrap around
         match t with
-        | Pipeline _ | Estimator _ -> (t::acc),i,tcount
+        | Pipeline _ | PipelineN _ | Estimator _ -> (t::acc),i,tcount
         | Opt t'  -> 
             if genome.[i] % 2 = 0 then 
                 tranlateTerm genome (acc,i+1,tcount+1) t'
@@ -60,6 +62,7 @@ module Grammar =
         let h,ts =
             match terminals with
             | Pipeline p::rest -> p(),rest
+            | PipelineN (n,p)::rest -> p(),rest
             | (Estimator e1)::(Estimator e2)::rest -> (e1().Append(e2())),rest
             | (Estimator e1)::(Pipeline e2)::rest  -> (e1().Append(e2())),rest
             | _                                    -> failwith "Given list should be only Pipeline or Estimator terms with atleast two estimators or one pipeline"
@@ -67,7 +70,8 @@ module Grammar =
         ||> List.fold (fun acc t ->
             match t with 
             | Estimator e -> acc.Append(e())
-            | Pipeline p -> (acc,p().Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
+            | Pipeline p 
+            | PipelineN (_,p) -> (acc,p().Estimators) ||> Seq.fold(fun acc kv -> acc.Append(kv.Value))
             | _          -> failwith "Only Pipeline or Estimator terms expected. Ensure 'translate' is called")
 
     let pipelineHash ctx terminals =
@@ -105,6 +109,7 @@ module Grammar =
                 let d'' = d + d'
                 maxChoices d'' rest
             | Pipeline _::rest -> maxChoices d rest
+            | PipelineN _ ::rest -> maxChoices d rest
             | Estimator _::rest -> maxChoices d rest
 
         maxChoices 0 g'

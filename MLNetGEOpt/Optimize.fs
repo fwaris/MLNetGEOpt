@@ -77,6 +77,7 @@ module Optimize =
                 let exp = expFac pipeline                
                 try 
                     let rslt = exp.Run()                    
+                    System.GC.Collect()
                     fmap <- fmap |> Map.add pHash {Result=rslt; TCount=tcount; PipelineHash = pHash}
                     rsltAgnt.Post rslt
                     rslt.Metric
