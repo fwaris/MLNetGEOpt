@@ -61,11 +61,12 @@ module Grammar =
     let toPipeline terminals = 
         let h,ts =
             match terminals with
-            | Pipeline p::rest -> p(),rest
-            | PipelineN (n,p)::rest -> p(),rest
-            | (Estimator e1)::(Estimator e2)::rest -> (e1().Append(e2())),rest
-            | (Estimator e1)::(Pipeline e2)::rest  -> (e1().Append(e2())),rest
-            | _                                    -> failwith "Given list should be only Pipeline or Estimator terms with atleast two estimators or one pipeline"
+            | Pipeline p::rest                        -> p(),rest
+            | PipelineN (n,p)::rest                   -> p(),rest
+            | (Estimator e1)::(Estimator e2)::rest    -> (e1().Append(e2())),rest
+            | (Estimator e1)::(Pipeline e2)::rest  
+            | (Estimator e1)::(PipelineN(_,e2))::rest -> (e1().Append(e2())),rest
+            | _                                       -> failwith "Given list should be only Pipeline or Estimator terms with atleast two estimators or one pipeline"
         (h,ts) 
         ||> List.fold (fun acc t ->
             match t with 
